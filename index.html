@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>多站整合工作台 v1.4.0</title>
+  <style>
+    :root {
+      --bg-canvas: #090d16;
+      --bg-surface: #111827;
+      --bg-card: #1f2937;
+      --border-subtle: #374151;
+      --primary: #0284c7;
+      --primary-hover: #38bdf8;
+      --text-main: #f9fafb;
+      --text-muted: #9ca3af;
+      --danger: #ef4444;
+      --sidebar-width: 330px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+      background-color: var(--bg-canvas);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* 左側主側邊欄 */
+    aside {
+      width: var(--sidebar-width);
+      background-color: var(--bg-surface);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.25s ease;
+      z-index: 40;
+    }
+
+    aside.collapsed {
+      margin-left: calc(-1 * var(--sidebar-width));
+    }
+
+    .brand-header {
+      padding: 1.5rem 1.25rem;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .version-badge {
+      font-size: 0.85rem;
+      background-color: var(--border-subtle);
+      color: var(--primary-hover);
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    /* 搜尋與新增面板 */
+    .action-panel {
+      padding: 1rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .search-input {
+      width: 100%;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+      color: var(--text-main);
+      font-size: 1.05rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary-hover);
+    }
+
+    .btn-add-site {
+      width: 100%;
+      background-color: var(--bg-card);
+      border: 1px dashed var(--border-subtle);
+      color: var(--primary-hover);
+      padding: 0.8rem;
+      border-radius: 8px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    .btn-add-site:hover {
+      background-color: rgba(56, 189, 248, 0.1);
+      border-color: var(--primary-hover);
+    }
+
+    /* 站點選單列表 */
+    .site-list {
+      list-style: none;
+      padding: 1rem 0.75rem;
+      flex-grow: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .site-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-radius: 10px;
+      background: transparent;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .site-item:hover {
+      background-color: rgba(255, 255, 255, 0.04);
+      border-color: var(--border-subtle);
+    }
+
+    .site-item.active {
+      background-color: var(--primary);
+      border-color: var(--primary-hover);
+      color: #ffffff;
+    }
+
+    .site-btn {
+      flex-grow: 1;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.9rem 1rem;
+      background: none;
+      border: none;
+      color: inherit;
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .site-item.active .site-tag {
+      background: rgba(0, 0, 0, 0.25);
+      color: #ffffff;
+    }
+
+    .site-tag {
+      font-size: 0.8rem;
+      padding: 0.25rem 0.55rem;
+      background-color: var(--bg-card);
+      border-radius: 5px;
+      color: var(--text-muted);
+      margin-left: auto;
+      white-space: nowrap;
+      font-weight: 500;
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.6rem 0.8rem;
+      cursor: pointer;
+      font-size: 1.1rem;
+      display: none;
+      border-radius: 6px;
+    }
+
+    .site-item:hover .delete-btn {
+      display: block;
+    }
+
+    .delete-btn:hover {
+      color: var(--danger);
+    }
+
+    /* 底部全螢幕面板 */
+    .sidebar-footer {
+      padding: 1.25rem 1rem;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .action-btn {
+      background-color: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+      padding: 0.85rem 1rem;
+      font-size: 1.05rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .action-btn:hover {
+      background-color: #374151;
+      border-color: var(--text-muted);
+    }
+
+    /* 右側主視窗容器 */
+    main {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background-color: var(--bg-canvas);
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .topbar {
+      height: 64px;
+      background-color: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .toggle-sidebar-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      font-size: 1.3rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .toggle-sidebar-btn:hover {
+      border-color: var(--primary-hover);
+    }
+
+    .current-site-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .icon-btn {
+      background-color: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+      padding: 0.55rem 0.95rem;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s;
+    }
+
+    .icon-btn:hover {
+      border-color: var(--primary-hover);
+      color: var(--primary-hover);
+    }
+
+    /* 工作台視窗區 */
+    .workspace-area {
+      position: relative;
+      flex-grow: 1;
+      width: 100%;
+      height: calc(100% - 64px - 36px);
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+      background-color: #ffffff;
+    }
+
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      background-color: var(--bg-canvas);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.2rem;
+      z-index: 20;
+      transition: opacity 0.2s ease, visibility 0.2s ease;
+    }
+
+    .loading-overlay.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .spin-ring {
+      width: 48px;
+      height: 48px;
+      border: 4px solid var(--bg-card);
+      border-top-color: var(--primary-hover);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .csp-warning-banner {
+      display: none;
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: var(--bg-card);
+      border: 1px solid var(--danger);
+      padding: 1.2rem 1.8rem;
+      border-radius: 10px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      z-index: 30;
+      text-align: center;
+      max-width: 90%;
+    }
+
+    .csp-warning-banner.visible {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    /* 網頁最下方置中標示文字 */
+    .site-footer {
+      height: 36px;
+      background-color: var(--bg-surface);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    /* 彈出視窗（Modal） */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-content {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      width: 100%;
+      max-width: 480px;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.6rem;
+      cursor: pointer;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .form-label {
+      font-size: 1rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .form-control {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+      color: var(--text-main);
+      font-size: 1.05rem;
+      outline: none;
+    }
+
+    .form-control:focus {
+      border-color: var(--primary-hover);
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    /* 吐司通知提示 */
+    .toast {
+      position: fixed;
+      top: 1.5rem;
+      right: 1.5rem;
+      background-color: var(--primary);
+      color: #ffffff;
+      padding: 0.8rem 1.4rem;
+      border-radius: 8px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+      transform: translateY(-60px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 120;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* 響應式設備調整 */
+    @media (max-width: 860px) {
+      aside {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        transform: translateX(-100%);
+      }
+
+      aside.mobile-open {
+        transform: translateX(0);
+      }
+
+      aside.collapsed {
+        margin-left: 0;
+      }
+
+      .topbar {
+        padding: 0 1rem;
+      }
+
+      .topbar-actions .icon-btn span {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 左側導航欄 -->
+  <aside id="sidebar">
+    <div class="brand-header">
+      <div class="brand-title">工作台總覽</div>
+      <span class="version-badge">v1.4.0</span>
+    </div>
+
+    <div class="action-panel">
+      <input type="text" id="searchInput" class="search-input" placeholder="過濾站點名稱或標籤..." />
+      <button class="btn-add-site" id="openAddModalBtn">+ 新增自訂站點</button>
+    </div>
+
+    <ul class="site-list" id="siteListContainer">
+      <!-- 站點項目由 JS 動態建立 -->
+    </ul>
+
+    <div class="sidebar-footer">
+      <button class="action-btn" id="fullscreenBtn">切換全螢幕 ⛶</button>
+    </div>
+  </aside>
+
+  <!-- 右側主視窗 -->
+  <main>
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="toggle-sidebar-btn" id="toggleSidebarBtn" aria-label="切換選單">☰</button>
+        <span class="current-site-title" id="currentTitle">載入中...</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="reloadFrameBtn" title="重新載入當前頁面">
+          ↻ <span>重新整理</span>
+        </button>
+        <button class="icon-btn" id="copyUrlBtn" title="複製站點網址">
+          ⎘ <span>複製連結</span>
+        </button>
+        <button class="icon-btn" id="openTabBtn" title="在新分頁打開">
+          ↗ <span>開啟外站</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="workspace-area">
+      <div class="loading-overlay" id="loadingOverlay">
+        <div class="spin-ring"></div>
+        <p style="font-size: 1.15rem; color: var(--text-muted);">正在連接子系統...</p>
+      </div>
+
+      <div class="csp-warning-banner" id="cspBanner">
+        <div style="font-size: 1.1rem; font-weight: 700; color: #f87171;">若畫面停留空白，表示該站點阻擋了 iframe 內嵌</div>
+        <p style="font-size: 0.95rem; color: var(--text-muted);">目標網站伺服器啟用了安全防護標頭。</p>
+        <button class="action-btn" id="bannerOpenBtn" style="margin-top: 0.3rem;">改由獨立新分頁開啟 ↗</button>
+      </div>
+
+      <iframe id="contentFrame" src="about:blank" title="主工作台內容視窗"></iframe>
+    </div>
+
+    <!-- 網頁最下方置中標示文字 -->
+    <footer class="site-footer">
+      Design：S.C. Kuo
+    </footer>
+  </main>
+
+  <!-- 新增站點 Modal 視窗 -->
+  <div class="modal-backdrop" id="addSiteModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">新增工作站點</div>
+        <button class="modal-close" id="closeModalBtn">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="siteNameInput">站點名稱</label>
+        <input type="text" id="siteNameInput" class="form-control" placeholder="例如：即時問答板" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="siteUrlInput">站點 URL（建議使用 https://）</label>
+        <input type="url" id="siteUrlInput" class="form-control" placeholder="https://example.com" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="siteTagInput">分類標籤</label>
+        <input type="text" id="siteTagInput" class="form-control" placeholder="例如：班級經營、輔助工具" />
+      </div>
+
+      <div class="modal-actions">
+        <button class="action-btn" id="cancelModalBtn" style="background: transparent;">取消</button>
+        <button class="action-btn" id="submitSiteBtn" style="background: var(--primary);">確認新增</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 吐司通知提示 -->
+  <div class="toast" id="toastMessage">已複製連結至剪貼簿</div>
+
+  <script>
+    // 預設站點資料清單
+    let siteRegistry = [
+      {
+        id: 'site-1',
+        title: '午餐節奏引導',
+        url: 'https://chien00-tw.github.io/lunch/',
+        tag: '生活指引',
+        isDefault: true
+      },
+      {
+        id: 'site-2',
+        title: '考場資訊系統',
+        url: 'https://chien00-tw.github.io/ailab-exam-timer/',
+        tag: '測驗計時',
+        isDefault: true
+      },
+      {
+        id: 'site-3',
+        title: '班級任務進度牆',
+        url: 'https://chien00-tw.github.io/ailab-classtask/',
+        tag: '任務看板',
+        isDefault: true
+      },
+      {
+        id: 'site-4',
+        title: '打掃工作分配',
+        url: 'https://chien00-tw.github.io/ailab-cleaning-duty-chart/',
+        tag: '勤務分工',
+        isDefault: true
+      }
+    ];
+
+    let currentActiveId = siteRegistry[0].id;
+    let loadTimeoutTimer = null;
+
+    // DOM 節點快取
+    const siteListContainer = document.getElementById('siteListContainer');
+    const contentFrame = document.getElementById('contentFrame');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const cspBanner = document.getElementById('cspBanner');
+    const currentTitle = document.getElementById('currentTitle');
+    const searchInput = document.getElementById('searchInput');
+    const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
+    const sidebar = document.getElementById('sidebar');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    const reloadFrameBtn = document.getElementById('reloadFrameBtn');
+    const copyUrlBtn = document.getElementById('copyUrlBtn');
+    const openTabBtn = document.getElementById('openTabBtn');
+    const bannerOpenBtn = document.getElementById('bannerOpenBtn');
+    const toastMessage = document.getElementById('toastMessage');
+
+    // Modal 控制節點
+    const addSiteModal = document.getElementById('addSiteModal');
+    const openAddModalBtn = document.getElementById('openAddModalBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const cancelModalBtn = document.getElementById('cancelModalBtn');
+    const submitSiteBtn = document.getElementById('submitSiteBtn');
+    const siteNameInput = document.getElementById('siteNameInput');
+    const siteUrlInput = document.getElementById('siteUrlInput');
+    const siteTagInput = document.getElementById('siteTagInput');
+
+    // 渲染站點列表
+    function renderSites(filterKeyword = '') {
+      siteListContainer.innerHTML = '';
+      const filtered = siteRegistry.filter(site => 
+        site.title.toLowerCase().includes(filterKeyword.toLowerCase()) || 
+        site.tag.toLowerCase().includes(filterKeyword.toLowerCase())
+      );
+
+      filtered.forEach(site => {
+        const li = document.createElement('li');
+        li.className = `site-item ${site.id === currentActiveId ? 'active' : ''}`;
+        
+        li.innerHTML = `
+          <button class="site-btn" data-id="${site.id}">
+            <span>${escapeHTML(site.title)}</span>
+            <span class="site-tag">${escapeHTML(site.tag)}</span>
+          </button>
+          ${!site.isDefault ? `<button class="delete-btn" data-delete-id="${site.id}" title="移除站點">✕</button>` : ''}
+        `;
+
+        siteListContainer.appendChild(li);
+      });
+
+      bindItemEvents();
+    }
+
+    // 綁定項目點擊事件
+    function bindItemEvents() {
+      document.querySelectorAll('.site-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const targetId = btn.dataset.id;
+          activateSite(targetId);
+        });
+      });
+
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const targetId = btn.dataset.deleteId;
+          deleteSite(targetId);
+        });
+      });
+    }
+
+    // 切換指定站點
+    function activateSite(siteId) {
+      const site = siteRegistry.find(s => s.id === siteId);
+      if (!site) return;
+
+      currentActiveId = site.id;
+      currentTitle.textContent = site.title;
+
+      // 啟動遮罩動畫與旗標重置
+      loadingOverlay.classList.remove('hidden');
+      cspBanner.classList.remove('visible');
+
+      contentFrame.src = site.url;
+      renderSites(searchInput.value);
+
+      // 設定 5 秒檢查機制，若有安全性標頭阻擋即提示外部開啟
+      clearTimeout(loadTimeoutTimer);
+      loadTimeoutTimer = setTimeout(() => {
+        loadingOverlay.classList.add('hidden');
+        cspBanner.classList.add('visible');
+      }, 5000);
+
+      // 行動裝置點選後自動收回抽屜
+      if (window.innerWidth <= 860) {
+        sidebar.classList.remove('mobile-open');
+      }
+    }
+
+    // 監聽 iframe 完成載入事件
+    contentFrame.addEventListener('load', () => {
+      clearTimeout(loadTimeoutTimer);
+      loadingOverlay.classList.add('hidden');
+      cspBanner.classList.remove('visible');
+    });
+
+    // 刪除自訂站點
+    function deleteSite(siteId) {
+      siteRegistry = siteRegistry.filter(s => s.id !== siteId);
+      if (currentActiveId === siteId && siteRegistry.length > 0) {
+        activateSite(siteRegistry[0].id);
+      } else {
+        renderSites(searchInput.value);
+      }
+      showToast('已移除該站點');
+    }
+
+    // 搜尋過濾監聽
+    searchInput.addEventListener('input', (e) => {
+      renderSites(e.target.value);
+    });
+
+    // 側邊欄展開收合
+    toggleSidebarBtn.addEventListener('click', () => {
+      if (window.innerWidth <= 860) {
+        sidebar.classList.toggle('mobile-open');
+      } else {
+        sidebar.classList.toggle('collapsed');
+      }
+    });
+
+    // 全螢幕切換控制
+    fullscreenBtn.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+        fullscreenBtn.textContent = '離開全螢幕 ✕';
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+          fullscreenBtn.textContent = '切換全螢幕 ⛶';
+        }
+      }
+    });
+
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement) {
+        fullscreenBtn.textContent = '切換全螢幕 ⛶';
+      }
+    });
+
+    // 重新載入當前 iframe
+    reloadFrameBtn.addEventListener('click', () => {
+      const activeSite = siteRegistry.find(s => s.id === currentActiveId);
+      if (activeSite) {
+        activateSite(activeSite.id);
+      }
+    });
+
+    // 複製連結功能
+    copyUrlBtn.addEventListener('click', () => {
+      const activeSite = siteRegistry.find(s => s.id === currentActiveId);
+      if (!activeSite) return;
+
+      const dummyInput = document.createElement('input');
+      dummyInput.value = activeSite.url;
+      document.body.appendChild(dummyInput);
+      dummyInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(dummyInput);
+
+      showToast('已複製站點網址！');
+    });
+
+    // 開啟外部獨立分頁
+    function openExternalCurrent() {
+      const activeSite = siteRegistry.find(s => s.id === currentActiveId);
+      if (activeSite) {
+        window.open(activeSite.url, '_blank', 'noopener,noreferrer');
+      }
+    }
+    openTabBtn.addEventListener('click', openExternalCurrent);
+    bannerOpenBtn.addEventListener('click', openExternalCurrent);
+
+    // Modal 開關控制
+    openAddModalBtn.addEventListener('click', () => {
+      addSiteModal.classList.add('open');
+      siteNameInput.value = '';
+      siteUrlInput.value = '';
+      siteTagInput.value = '';
+      siteNameInput.focus();
+    });
+
+    const closeModal = () => addSiteModal.classList.remove('open');
+    closeModalBtn.addEventListener('click', closeModal);
+    cancelModalBtn.addEventListener('click', closeModal);
+
+    // 新增站點提交
+    submitSiteBtn.addEventListener('click', () => {
+      const title = siteNameInput.value.trim();
+      let url = siteUrlInput.value.trim();
+      const tag = siteTagInput.value.trim() || '自訂站點';
+
+      if (!title || !url) {
+        showToast('請填寫站點名稱與網址');
+        return;
+      }
+
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+      }
+
+      const newSite = {
+        id: 'custom-' + Date.now(),
+        title,
+        url,
+        tag,
+        isDefault: false
+      };
+
+      siteRegistry.push(newSite);
+      closeModal();
+      renderSites();
+      activateSite(newSite.id);
+      showToast('成功加入新站點！');
+    });
+
+    // 吐司提示訊息
+    function showToast(text) {
+      toastMessage.textContent = text;
+      toastMessage.classList.add('show');
+      setTimeout(() => {
+        toastMessage.classList.remove('show');
+      }, 2400);
+    }
+
+    // 跳脫字元防護
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+      );
+    }
+
+    // 頁面初始化
+    window.addEventListener('DOMContentLoaded', () => {
+      renderSites();
+      activateSite(siteRegistry[0].id);
+    });
+  </script>
+</body>
+</html>
