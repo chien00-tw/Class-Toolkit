@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>多站整合工作台 v1.6.0</title>
+  <title>多站整合工作台 v2.0.0</title>
   <style>
     :root {
       --bg-canvas: #090d16;
@@ -501,6 +501,23 @@
       opacity: 1;
     }
 
+    /* 行動裝置側邊欄遮罩 */
+    .sidebar-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(3px);
+      z-index: 35;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .sidebar-backdrop.active {
+      display: block;
+      opacity: 1;
+    }
+
     /* 響應式設備調整 */
     @media (max-width: 860px) {
       aside {
@@ -535,22 +552,16 @@
   <aside id="sidebar">
     <div class="brand-header">
       <div class="brand-title">工作台總覽</div>
-      <span class="version-badge">v1.6.0</span>
-    </div>
-
-    <div class="action-panel">
-      <input type="text" id="searchInput" class="search-input" placeholder="過濾站點名稱或標籤..." />
-      <button class="btn-add-site" id="openAddModalBtn">+ 新增自訂站點</button>
+      <span class="version-badge">v2.0.0</span>
     </div>
 
     <ul class="site-list" id="siteListContainer">
       <!-- 站點項目由 JS 動態建立 -->
     </ul>
-
-    <div class="sidebar-footer">
-      <button class="action-btn" id="fullscreenBtn">切換全螢幕 ⛶</button>
-    </div>
   </aside>
+
+  <!-- 行動裝置選單背景點擊遮罩 -->
+  <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
 
   <!-- 右側主視窗 -->
   <main>
@@ -593,41 +604,11 @@
     </footer>
   </main>
 
-  <!-- 新增站點 Modal 視窗 -->
-  <div class="modal-backdrop" id="addSiteModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <div class="modal-title">新增工作站點</div>
-        <button class="modal-close" id="closeModalBtn">&times;</button>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="siteNameInput">站點名稱</label>
-        <input type="text" id="siteNameInput" class="form-control" placeholder="例如：即時問答板" />
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="siteUrlInput">站點 URL（建議使用 https://）</label>
-        <input type="url" id="siteUrlInput" class="form-control" placeholder="https://example.com" />
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="siteTagInput">分類標籤</label>
-        <input type="text" id="siteTagInput" class="form-control" placeholder="例如：班級經營、輔助工具" />
-      </div>
-
-      <div class="modal-actions">
-        <button class="action-btn" id="cancelModalBtn" style="background: transparent;">取消</button>
-        <button class="action-btn" id="submitSiteBtn" style="background: var(--primary);">確認新增</button>
-      </div>
-    </div>
-  </div>
-
   <!-- 吐司通知提示 -->
   <div class="toast" id="toastMessage">已複製連結至剪貼簿</div>
 
   <script>
-    // 預設站點資料清單
+    // 預設站點資料清單（依序排列）
     let siteRegistry = [
       {
         id: 'site-1',
@@ -638,43 +619,51 @@
       },
       {
         id: 'site-2',
-        title: '考場資訊系統',
-        url: 'https://chien00-tw.github.io/ailab-exam-timer/',
-        tag: '測驗計時',
-        isDefault: true
-      },
-      {
-        id: 'site-3',
         title: '班級任務進度牆',
         url: 'https://chien00-tw.github.io/ailab-classtask/',
         tag: '任務看板',
         isDefault: true
       },
       {
+        id: 'site-3',
+        title: '考場資訊系統',
+        url: 'https://chien00-tw.github.io/ailab-exam-timer/',
+        tag: '測驗計時',
+        isDefault: true
+      },
+      {
         id: 'site-4',
+        title: '課堂計時系統',
+        url: 'https://chien00-tw.github.io/ailab_timer/',
+        tag: '教學節奏',
+        isDefault: true
+      },
+      {
+        id: 'site-5',
+        title: '課堂抽籤系統',
+        url: 'https://chien00-tw.github.io/ailab_Classroom_Random_Selector/',
+        tag: '隨機點名',
+        isDefault: true
+      },
+      {
+        id: 'site-6',
         title: '班級座位編排',
         url: 'https://chien00-tw.github.io/ailab_seating_master/',
         tag: '空間配置',
         isDefault: true
       },
       {
-        id: 'site-5',
+        id: 'site-7',
         title: '打掃工作分配',
         url: 'https://chien00-tw.github.io/ailab-cleaning-duty-chart/',
         tag: '勤務分工',
-        isDefault: true
-      },
-      {
-        id: 'site-6',
-        title: '課堂計時器',
-        url: 'https://chien00-tw.github.io/ailab_timer/',
-        tag: '教學節奏',
         isDefault: true
       }
     ];
 
     let currentActiveId = siteRegistry[0].id;
     let loadTimeoutTimer = null;
+    let toastTimer = null;
 
     // DOM 節點快取
     const siteListContainer = document.getElementById('siteListContainer');
@@ -682,35 +671,19 @@
     const loadingOverlay = document.getElementById('loadingOverlay');
     const cspBanner = document.getElementById('cspBanner');
     const currentTitle = document.getElementById('currentTitle');
-    const searchInput = document.getElementById('searchInput');
     const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
     const sidebar = document.getElementById('sidebar');
-    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
     const reloadFrameBtn = document.getElementById('reloadFrameBtn');
     const copyUrlBtn = document.getElementById('copyUrlBtn');
     const openTabBtn = document.getElementById('openTabBtn');
     const bannerOpenBtn = document.getElementById('bannerOpenBtn');
     const toastMessage = document.getElementById('toastMessage');
 
-    // Modal 控制節點
-    const addSiteModal = document.getElementById('addSiteModal');
-    const openAddModalBtn = document.getElementById('openAddModalBtn');
-    const closeModalBtn = document.getElementById('closeModalBtn');
-    const cancelModalBtn = document.getElementById('cancelModalBtn');
-    const submitSiteBtn = document.getElementById('submitSiteBtn');
-    const siteNameInput = document.getElementById('siteNameInput');
-    const siteUrlInput = document.getElementById('siteUrlInput');
-    const siteTagInput = document.getElementById('siteTagInput');
-
     // 渲染站點列表
-    function renderSites(filterKeyword = '') {
+    function renderSites() {
       siteListContainer.innerHTML = '';
-      const filtered = siteRegistry.filter(site => 
-        site.title.toLowerCase().includes(filterKeyword.toLowerCase()) || 
-        site.tag.toLowerCase().includes(filterKeyword.toLowerCase())
-      );
-
-      filtered.forEach(site => {
+      siteRegistry.forEach(site => {
         const li = document.createElement('li');
         li.className = `site-item ${site.id === currentActiveId ? 'active' : ''}`;
         
@@ -719,7 +692,6 @@
             <span>${escapeHTML(site.title)}</span>
             <span class="site-tag">${escapeHTML(site.tag)}</span>
           </button>
-          ${!site.isDefault ? `<button class="delete-btn" data-delete-id="${site.id}" title="移除站點">✕</button>` : ''}
         `;
 
         siteListContainer.appendChild(li);
@@ -734,14 +706,6 @@
         btn.addEventListener('click', () => {
           const targetId = btn.dataset.id;
           activateSite(targetId);
-        });
-      });
-
-      document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const targetId = btn.dataset.deleteId;
-          deleteSite(targetId);
         });
       });
     }
@@ -759,7 +723,7 @@
       cspBanner.classList.remove('visible');
 
       contentFrame.src = site.url;
-      renderSites(searchInput.value);
+      renderSites();
 
       // 設定 5 秒檢查機制，若有安全性標頭阻擋即提示外部開啟
       clearTimeout(loadTimeoutTimer);
@@ -768,84 +732,101 @@
         cspBanner.classList.add('visible');
       }, 5000);
 
-      // 行動裝置點選後自動收回抽屜
+      // 行動裝置點選後自動收回抽屜並隱藏遮罩
       if (window.innerWidth <= 860) {
-        sidebar.classList.remove('mobile-open');
+        closeMobileSidebar();
       }
     }
 
-    // 監聽 iframe 完成載入事件
+    // 關閉行動端抽屜式選單
+    function closeMobileSidebar() {
+      sidebar.classList.remove('mobile-open');
+      if (sidebarBackdrop) {
+        sidebarBackdrop.classList.remove('active');
+      }
+    }
+
+    // 監聽 iframe 完成載入事件（排除初始空白頁誤判）
     contentFrame.addEventListener('load', () => {
+      if (!contentFrame.src || contentFrame.src === 'about:blank') return;
       clearTimeout(loadTimeoutTimer);
       loadingOverlay.classList.add('hidden');
       cspBanner.classList.remove('visible');
     });
 
-    // 刪除自訂站點
-    function deleteSite(siteId) {
-      siteRegistry = siteRegistry.filter(s => s.id !== siteId);
-      if (currentActiveId === siteId && siteRegistry.length > 0) {
-        activateSite(siteRegistry[0].id);
-      } else {
-        renderSites(searchInput.value);
-      }
-      showToast('已移除該站點');
-    }
-
-    // 搜尋過濾監聽
-    searchInput.addEventListener('input', (e) => {
-      renderSites(e.target.value);
-    });
-
-    // 側邊欄展開收合
+    // 側邊欄展開收合切換
     toggleSidebarBtn.addEventListener('click', () => {
       if (window.innerWidth <= 860) {
-        sidebar.classList.toggle('mobile-open');
+        const isOpen = sidebar.classList.toggle('mobile-open');
+        if (sidebarBackdrop) {
+          sidebarBackdrop.classList.toggle('active', isOpen);
+        }
       } else {
         sidebar.classList.toggle('collapsed');
       }
     });
 
-    // 全螢幕切換控制
-    fullscreenBtn.addEventListener('click', () => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-        fullscreenBtn.textContent = '離開全螢幕 ✕';
-      } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-          fullscreenBtn.textContent = '切換全螢幕 ⛶';
-        }
-      }
-    });
+    // 點擊遮罩直接關閉行動端側邊欄
+    if (sidebarBackdrop) {
+      sidebarBackdrop.addEventListener('click', closeMobileSidebar);
+    }
 
-    document.addEventListener('fullscreenchange', () => {
-      if (!document.fullscreenElement) {
-        fullscreenBtn.textContent = '切換全螢幕 ⛶';
-      }
-    });
-
-    // 重新載入當前 iframe
+    // 重新載入當前 iframe（深度相容跨域重整）
     reloadFrameBtn.addEventListener('click', () => {
       const activeSite = siteRegistry.find(s => s.id === currentActiveId);
-      if (activeSite) {
-        activateSite(activeSite.id);
+      if (!activeSite) return;
+
+      loadingOverlay.classList.remove('hidden');
+      cspBanner.classList.remove('visible');
+
+      try {
+        contentFrame.contentWindow.location.reload();
+      } catch (e) {
+        // 跨網域存取限制時之重載備援機制
+        const targetUrl = activeSite.url;
+        contentFrame.src = 'about:blank';
+        setTimeout(() => {
+          contentFrame.src = targetUrl;
+        }, 50);
       }
+
+      clearTimeout(loadTimeoutTimer);
+      loadTimeoutTimer = setTimeout(() => {
+        loadingOverlay.classList.add('hidden');
+        cspBanner.classList.add('visible');
+      }, 5000);
+
+      showToast('正在重新載入頁面...');
     });
 
-    // 複製連結功能
+    // 複製連結功能（相容 iOS/Android 及受限嵌入環境）
     copyUrlBtn.addEventListener('click', () => {
       const activeSite = siteRegistry.find(s => s.id === currentActiveId);
       if (!activeSite) return;
 
-      const dummyInput = document.createElement('input');
-      dummyInput.value = activeSite.url;
-      document.body.appendChild(dummyInput);
-      dummyInput.select();
-      document.execCommand('copy');
-      document.body.removeChild(dummyInput);
+      const textarea = document.createElement('textarea');
+      textarea.value = activeSite.url;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      textarea.setSelectionRange(0, 99999);
 
-      showToast('已複製站點網址！');
+      let isSuccess = false;
+      try {
+        isSuccess = document.execCommand('copy');
+      } catch (err) {
+        isSuccess = false;
+      }
+      document.body.removeChild(textarea);
+
+      if (isSuccess) {
+        showToast(`已複製「${activeSite.title}」網址！`);
+      } else {
+        showToast('複製失敗，請手動複製連結');
+      }
     });
 
     // 開啟外部獨立分頁
@@ -858,54 +839,12 @@
     openTabBtn.addEventListener('click', openExternalCurrent);
     bannerOpenBtn.addEventListener('click', openExternalCurrent);
 
-    // Modal 開關控制
-    openAddModalBtn.addEventListener('click', () => {
-      addSiteModal.classList.add('open');
-      siteNameInput.value = '';
-      siteUrlInput.value = '';
-      siteTagInput.value = '';
-      siteNameInput.focus();
-    });
-
-    const closeModal = () => addSiteModal.classList.remove('open');
-    closeModalBtn.addEventListener('click', closeModal);
-    cancelModalBtn.addEventListener('click', closeModal);
-
-    // 新增站點提交
-    submitSiteBtn.addEventListener('click', () => {
-      const title = siteNameInput.value.trim();
-      let url = siteUrlInput.value.trim();
-      const tag = siteTagInput.value.trim() || '自訂站點';
-
-      if (!title || !url) {
-        showToast('請填寫站點名稱與網址');
-        return;
-      }
-
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        url = 'https://' + url;
-      }
-
-      const newSite = {
-        id: 'custom-' + Date.now(),
-        title,
-        url,
-        tag,
-        isDefault: false
-      };
-
-      siteRegistry.push(newSite);
-      closeModal();
-      renderSites();
-      activateSite(newSite.id);
-      showToast('成功加入新站點！');
-    });
-
-    // 吐司提示訊息
+    // 吐司提示訊息（修復連續觸發計時器疊加問題）
     function showToast(text) {
       toastMessage.textContent = text;
       toastMessage.classList.add('show');
-      setTimeout(() => {
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
         toastMessage.classList.remove('show');
       }, 2400);
     }
