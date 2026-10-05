@@ -2,865 +2,1650 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>多站整合工作台 v2.0.0</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>班級任務進度牆 v3.5</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
-    :root {
-      --bg-canvas: #090d16;
-      --bg-surface: #111827;
-      --bg-card: #1f2937;
-      --border-subtle: #374151;
-      --primary: #0284c7;
-      --primary-hover: #38bdf8;
-      --text-main: #f9fafb;
-      --text-muted: #9ca3af;
-      --danger: #ef4444;
-      --sidebar-width: 330px;
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=Chakra+Petch:wght@700&display=swap');
+    
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
     }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
-      background-color: var(--bg-canvas);
-      color: var(--text-main);
-      height: 100vh;
-      display: flex;
-      overflow: hidden;
-    }
-
-    /* 左側主側邊欄 */
-    aside {
-      width: var(--sidebar-width);
-      background-color: var(--bg-surface);
-      border-right: 1px solid var(--border-subtle);
-      display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
-      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.25s ease;
-      z-index: 40;
-    }
-
-    aside.collapsed {
-      margin-left: calc(-1 * var(--sidebar-width));
-    }
-
-    .brand-header {
-      padding: 1.5rem 1.25rem;
-      border-bottom: 1px solid var(--border-subtle);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .brand-title {
-      font-size: 1.4rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-    }
-
-    .version-badge {
-      font-size: 0.85rem;
-      background-color: var(--border-subtle);
-      color: var(--primary-hover);
-      padding: 0.3rem 0.6rem;
-      border-radius: 6px;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-    }
-
-    /* 搜尋與新增面板 */
-    .action-panel {
-      padding: 1rem 1.25rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-
-    .search-input {
-      width: 100%;
-      background-color: var(--bg-card);
-      border: 1px solid var(--border-subtle);
-      border-radius: 8px;
-      padding: 0.8rem 1rem;
-      color: var(--text-main);
-      font-size: 1.05rem;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .search-input:focus {
-      border-color: var(--primary-hover);
-    }
-
-    .btn-add-site {
-      width: 100%;
-      background-color: var(--bg-card);
-      border: 1px dashed var(--border-subtle);
-      color: var(--primary-hover);
-      padding: 0.8rem;
-      border-radius: 8px;
-      font-size: 1.05rem;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 0.5rem;
-      transition: all 0.2s;
-    }
-
-    .btn-add-site:hover {
-      background-color: rgba(56, 189, 248, 0.1);
-      border-color: var(--primary-hover);
-    }
-
-    /* 站點選單列表 */
-    .site-list {
-      list-style: none;
-      padding: 1rem 0.75rem;
-      flex-grow: 1;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-    }
-
-    .site-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-radius: 10px;
-      background: transparent;
-      border: 1px solid transparent;
-      transition: all 0.15s ease;
-      position: relative;
-    }
-
-    .site-item:hover {
-      background-color: rgba(255, 255, 255, 0.04);
-      border-color: var(--border-subtle);
-    }
-
-    .site-item.active {
-      background-color: var(--primary);
-      border-color: var(--primary-hover);
-      color: #ffffff;
-    }
-
-    .site-btn {
-      flex-grow: 1;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.9rem 1rem;
-      background: none;
-      border: none;
-      color: inherit;
-      font-size: 1.1rem;
-      font-weight: 600;
-      text-align: left;
-      cursor: pointer;
-    }
-
-    .site-item.active .site-tag {
-      background: rgba(0, 0, 0, 0.25);
-      color: #ffffff;
-    }
-
-    .site-tag {
-      font-size: 0.8rem;
-      padding: 0.25rem 0.55rem;
-      background-color: var(--bg-card);
-      border-radius: 5px;
-      color: var(--text-muted);
-      margin-left: auto;
-      white-space: nowrap;
-      font-weight: 500;
-    }
-
-    .delete-btn {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      padding: 0.6rem 0.8rem;
-      cursor: pointer;
-      font-size: 1.1rem;
-      display: none;
-      border-radius: 6px;
-    }
-
-    .site-item:hover .delete-btn {
-      display: block;
-    }
-
-    .delete-btn:hover {
-      color: var(--danger);
-    }
-
-    /* 底部全螢幕面板 */
-    .sidebar-footer {
-      padding: 1.25rem 1rem;
-      border-top: 1px solid var(--border-subtle);
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .action-btn {
-      background-color: var(--bg-card);
-      color: var(--text-main);
-      border: 1px solid var(--border-subtle);
-      padding: 0.85rem 1rem;
-      font-size: 1.05rem;
-      font-weight: 600;
-      border-radius: 8px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      transition: background 0.2s, border-color 0.2s;
-    }
-
-    .action-btn:hover {
-      background-color: #374151;
-      border-color: var(--text-muted);
-    }
-
-    /* 右側主視窗容器 */
-    main {
-      flex-grow: 1;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-      background-color: var(--bg-canvas);
-      overflow: hidden;
-      min-width: 0;
-    }
-
-    .topbar {
-      height: 64px;
-      background-color: var(--bg-surface);
-      border-bottom: 1px solid var(--border-subtle);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 1.5rem;
-      flex-shrink: 0;
-    }
-
-    .topbar-left {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .toggle-sidebar-btn {
-      background: var(--bg-card);
-      border: 1px solid var(--border-subtle);
-      color: var(--text-main);
-      width: 42px;
-      height: 42px;
-      border-radius: 8px;
-      font-size: 1.3rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s;
-    }
-
-    .toggle-sidebar-btn:hover {
-      border-color: var(--primary-hover);
-    }
-
-    .current-site-title {
-      font-size: 1.25rem;
-      font-weight: 700;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .topbar-actions {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-    }
-
-    .icon-btn {
-      background-color: var(--bg-card);
-      color: var(--text-main);
-      border: 1px solid var(--border-subtle);
-      padding: 0.55rem 0.95rem;
-      border-radius: 6px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      transition: all 0.2s;
-    }
-
-    .icon-btn:hover {
-      border-color: var(--primary-hover);
-      color: var(--primary-hover);
-    }
-
-    /* 工作台視窗區 */
-    .workspace-area {
-      position: relative;
-      flex-grow: 1;
-      width: 100%;
-      height: calc(100% - 64px - 36px);
-    }
-
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-      display: block;
-      background-color: #ffffff;
-    }
-
-    .loading-overlay {
-      position: absolute;
-      inset: 0;
-      background-color: var(--bg-canvas);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 1.2rem;
-      z-index: 20;
-      transition: opacity 0.2s ease, visibility 0.2s ease;
-    }
-
-    .loading-overlay.hidden {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-    }
-
-    .spin-ring {
-      width: 48px;
-      height: 48px;
-      border: 4px solid var(--bg-card);
-      border-top-color: var(--primary-hover);
-      border-radius: 50%;
-      animation: spin 0.75s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .csp-warning-banner {
-      display: none;
-      position: absolute;
-      bottom: 2rem;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: var(--bg-card);
-      border: 1px solid var(--danger);
-      padding: 1.2rem 1.8rem;
-      border-radius: 10px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-      z-index: 30;
-      text-align: center;
-      max-width: 90%;
-    }
-
-    .csp-warning-banner.visible {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.6rem;
-    }
-
-    /* 網頁最下方置中標示文字 */
-    .site-footer {
-      height: 36px;
-      background-color: var(--bg-surface);
-      border-top: 1px solid var(--border-subtle);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      letter-spacing: 0.05em;
+      font-family: 'Noto Sans TC', sans-serif;
+      background-color: #050814;
+      color: #f8fafc;
       user-select: none;
-      flex-shrink: 0;
+      overflow-x: hidden;
+      touch-action: manipulation;
     }
 
-    /* 彈出視窗（Modal） */
-    .modal-backdrop {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background-color: rgba(0, 0, 0, 0.75);
-      backdrop-filter: blur(4px);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
+    .font-num {
+      font-family: 'Chakra Petch', 'Noto Sans TC', monospace;
     }
 
-    .modal-backdrop.open {
-      display: flex;
+    /* Streamlined Cyber Deck Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d1a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3b82f6;
     }
 
-    .modal-content {
-      background-color: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: 14px;
-      width: 100%;
-      max-width: 480px;
-      padding: 2rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
+    .glass-card {
+      background: rgba(13, 22, 40, 0.95);
+      border: 1.5px solid rgba(59, 130, 246, 0.35);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.6);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .glass-card:hover {
+      border-color: rgba(96, 165, 250, 0.7);
     }
 
-    .modal-title {
-      font-size: 1.35rem;
-      font-weight: 700;
+    .glass-card-complete {
+      background: rgba(6, 78, 59, 0.6) !important;
+      border-color: #34d399 !important;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.35) !important;
     }
 
-    .modal-close {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      font-size: 1.6rem;
-      cursor: pointer;
+    .editable-active {
+      outline: 2.5px dashed #fbbf24 !important;
+      outline-offset: 2px;
+      cursor: text !important;
+      background: rgba(245, 158, 11, 0.25) !important;
+      border-radius: 6px;
     }
 
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
+    .touch-target {
+      touch-action: manipulation;
     }
 
-    .form-label {
-      font-size: 1rem;
-      color: var(--text-muted);
-      font-weight: 600;
+    /* Large-Screen Adaptive Matrix Layouts */
+    @media (min-width: 1024px) {
+      .cols-screen-7 { grid-template-columns: repeat(7, minmax(0, 1fr)) !important; }
+      .cols-screen-8 { grid-template-columns: repeat(8, minmax(0, 1fr)) !important; }
+      .cols-screen-9 { grid-template-columns: repeat(9, minmax(0, 1fr)) !important; }
     }
 
-    .form-control {
-      background-color: var(--bg-card);
-      border: 1px solid var(--border-subtle);
-      border-radius: 8px;
-      padding: 0.8rem 1rem;
-      color: var(--text-main);
-      font-size: 1.05rem;
-      outline: none;
-    }
-
-    .form-control:focus {
-      border-color: var(--primary-hover);
-    }
-
-    .modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 0.75rem;
-      margin-top: 0.5rem;
-    }
-
-    /* 吐司通知提示 */
-    .toast {
-      position: fixed;
-      top: 1.5rem;
-      right: 1.5rem;
-      background-color: var(--primary);
-      color: #ffffff;
-      padding: 0.8rem 1.4rem;
-      border-radius: 8px;
-      font-size: 1.05rem;
-      font-weight: 600;
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-      transform: translateY(-60px);
-      opacity: 0;
-      transition: all 0.3s ease;
-      z-index: 120;
-    }
-
-    .toast.show {
-      transform: translateY(0);
-      opacity: 1;
-    }
-
-    /* 行動裝置側邊欄遮罩 */
-    .sidebar-backdrop {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background-color: rgba(0, 0, 0, 0.65);
-      backdrop-filter: blur(3px);
-      z-index: 35;
-      opacity: 0;
-      transition: opacity 0.25s ease;
-    }
-
-    .sidebar-backdrop.active {
-      display: block;
-      opacity: 1;
-    }
-
-    /* 響應式設備調整 */
-    @media (max-width: 860px) {
-      aside {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 0;
-        transform: translateX(-100%);
-      }
-
-      aside.mobile-open {
-        transform: translateX(0);
-      }
-
-      aside.collapsed {
-        margin-left: 0;
-      }
-
-      .topbar {
-        padding: 0 1rem;
-      }
-
-      .topbar-actions .icon-btn span {
-        display: none;
-      }
+    /* Pseudo-fullscreen mode fallback for restricted iframe/touch screens */
+    .pseudo-fullscreen-mode {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 99999 !important;
+      background: #050814 !important;
+      padding: 0.75rem !important;
+      overflow-y: auto !important;
     }
   </style>
 </head>
-<body>
+<body id="app-body" class="h-screen flex flex-col justify-between p-2 sm:p-3 select-none bg-[#050814]">
 
-  <!-- 左側導航欄 -->
-  <aside id="sidebar">
-    <div class="brand-header">
-      <div class="brand-title">工作台總覽</div>
-      <span class="version-badge">v2.0.0</span>
+  <!-- TOP CONSOLIDATED CONTROL BAR -->
+  <header class="glass-card rounded-xl px-3 py-1.5 mb-2 flex items-center justify-between gap-2 flex-wrap shrink-0 border border-blue-500/40">
+    
+    <!-- Left: Brand Logo + Date + Icon Utility Group -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <!-- Title & Version Badge -->
+      <div class="flex items-center gap-1.5">
+        <h1 class="text-base sm:text-lg font-black tracking-wide text-white flex items-center gap-1.5">
+          <i class="fa-solid fa-layer-group text-sky-400"></i>
+          <span>班級任務進度牆</span>
+        </h1>
+        <span class="bg-blue-900/80 text-sky-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-blue-400/50">v3.5</span>
+      </div>
+
+      <!-- Current Date Capsule -->
+      <div class="bg-slate-900/90 text-amber-300 text-xs font-black px-2.5 py-1 rounded-lg border border-amber-500/40 flex items-center gap-1.5 shadow-sm">
+        <i class="fa-regular fa-calendar-days text-amber-400 text-xs"></i>
+        <span id="current-date-text">載入中...</span>
+      </div>
+
+      <!-- Action Icon Buttons (Compact 36px) -->
+      <div class="flex items-center gap-1">
+        <button onclick="openStudentCountModal()" title="調整班級人數" aria-label="調整班級人數"
+          class="w-8 h-8 sm:w-9 sm:h-9 bg-indigo-950/80 hover:bg-indigo-700 text-indigo-200 active:scale-90 text-sm font-bold rounded-lg border border-indigo-500/60 transition flex items-center justify-center shadow touch-target">
+          <i class="fa-solid fa-users-gear"></i>
+        </button>
+
+        <button id="fullscreen-btn" onclick="toggleFullscreen()" title="全螢幕模式" aria-label="全螢幕模式"
+          class="w-8 h-8 sm:w-9 sm:h-9 bg-blue-950/80 hover:bg-blue-700 text-blue-200 active:scale-90 text-sm font-bold rounded-lg border border-blue-500/60 transition flex items-center justify-center shadow touch-target">
+          <i id="fullscreen-icon" class="fa-solid fa-expand"></i>
+        </button>
+        
+        <button id="edit-mode-btn" onclick="toggleEditMode()" title="編修模式" aria-label="編修模式"
+          class="w-8 h-8 sm:w-9 sm:h-9 bg-amber-950/80 hover:bg-amber-600 text-amber-200 active:scale-90 text-sm font-bold rounded-lg border border-amber-500/60 transition flex items-center justify-center shadow touch-target">
+          <i class="fa-solid fa-pen-to-square"></i>
+        </button>
+        
+        <button onclick="openResetModal()" title="清空作業紀錄" aria-label="清空作業紀錄"
+          class="w-8 h-8 sm:w-9 sm:h-9 bg-rose-950/80 hover:bg-rose-700 text-rose-200 active:scale-90 text-sm font-bold rounded-lg border border-rose-500/60 transition flex items-center justify-center shadow touch-target">
+          <i class="fa-solid fa-rotate-left"></i>
+        </button>
+      </div>
     </div>
 
-    <ul class="site-list" id="siteListContainer">
-      <!-- 站點項目由 JS 動態建立 -->
-    </ul>
-  </aside>
-
-  <!-- 行動裝置選單背景點擊遮罩 -->
-  <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
-
-  <!-- 右側主視窗 -->
-  <main>
-    <header class="topbar">
-      <div class="topbar-left">
-        <button class="toggle-sidebar-btn" id="toggleSidebarBtn" aria-label="切換選單">☰</button>
-        <span class="current-site-title" id="currentTitle">載入中...</span>
-      </div>
-      <div class="topbar-actions">
-        <button class="icon-btn" id="reloadFrameBtn" title="重新載入當前頁面">
-          ↻ <span>重新整理</span>
-        </button>
-        <button class="icon-btn" id="copyUrlBtn" title="複製站點網址">
-          ⎘ <span>複製連結</span>
-        </button>
-        <button class="icon-btn" id="openTabBtn" title="在新分頁打開">
-          ↗ <span>開啟外站</span>
-        </button>
-      </div>
-    </header>
-
-    <div class="workspace-area">
-      <div class="loading-overlay" id="loadingOverlay">
-        <div class="spin-ring"></div>
-        <p style="font-size: 1.15rem; color: var(--text-muted);">正在連接子系統...</p>
+    <!-- Right: Integrated Completion Rate Pill + Clock Pill + Drawer Collapse Toggle -->
+    <div class="flex items-center gap-2 ml-auto">
+      <!-- Class Completion Rate -->
+      <div id="class-rate-card" class="bg-slate-900/90 px-3 py-0.5 sm:py-1 rounded-xl flex items-center gap-1.5 border border-blue-500/50 shadow-sm transition-all duration-300">
+        <div class="text-[10px] sm:text-xs text-blue-300 font-bold flex items-center gap-1">
+          <i class="fa-solid fa-chart-line text-blue-400"></i>
+          <span class="hidden md:inline">全班完成率</span>
+        </div>
+        <div class="text-xl sm:text-2xl font-black text-sky-400 font-num tracking-tight flex items-baseline">
+          <span id="class-rate-text">0</span><span class="text-xs font-bold text-sky-300 ml-0.5">%</span>
+        </div>
       </div>
 
-      <div class="csp-warning-banner" id="cspBanner">
-        <div style="font-size: 1.1rem; font-weight: 700; color: #f87171;">若畫面停留空白，表示該站點阻擋了 iframe 內嵌</div>
-        <p style="font-size: 0.95rem; color: var(--text-muted);">目標網站伺服器啟用了安全防護標頭。</p>
-        <button class="action-btn" id="bannerOpenBtn" style="margin-top: 0.3rem;">改由獨立新分頁開啟 ↗</button>
+      <!-- Current Clock -->
+      <div class="bg-slate-900/90 px-3 py-0.5 sm:py-1 rounded-xl flex items-center gap-1.5 border border-amber-500/50 shadow-sm">
+        <div class="text-[10px] sm:text-xs text-amber-200/90 font-bold flex items-center gap-1">
+          <i class="fa-regular fa-clock text-amber-400"></i>
+          <span class="hidden md:inline">目前時間</span>
+        </div>
+        <div id="clock-display" class="text-xl sm:text-2xl font-num font-black text-amber-300 tracking-wider">
+          08:00
+        </div>
       </div>
 
-      <iframe id="contentFrame" src="about:blank" title="主工作台內容視窗"></iframe>
+      <!-- Toggle Task Panel Collapse Button -->
+      <button id="toggle-task-panel-btn" onclick="toggleTaskPanelVisibility()" title="收合/展開任務中樞"
+        class="w-8 h-8 sm:w-9 sm:h-9 bg-slate-800 hover:bg-slate-700 text-slate-200 active:scale-90 text-sm font-bold rounded-lg border border-slate-600 transition flex items-center justify-center shadow touch-target">
+        <i id="toggle-task-panel-icon" class="fa-solid fa-chevron-up"></i>
+      </button>
     </div>
+  </header>
 
-    <!-- 網頁最下方置中標示文字 -->
-    <footer class="site-footer">
-      Design：S.C. Kuo
-    </footer>
+  <!-- CONSOLIDATED COMPACT TASK BAR -->
+  <section id="task-panel-wrapper" class="glass-card rounded-xl p-2 mb-2 border border-blue-800/60 shadow-lg shrink-0 transition-all duration-200">
+    <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2">
+      
+      <!-- Left Sub-Block: Anti-Misclick Switch + Today's Task Pills + Batch Controls -->
+      <div class="flex-1 flex flex-col sm:flex-row items-start sm:items-center gap-2 overflow-hidden">
+        <!-- Anti-Misclick Master Lock Switch -->
+        <button id="task-lock-btn" onclick="toggleTaskPanelLock()"
+                class="px-2.5 py-1 text-xs font-black rounded-lg transition flex items-center gap-1.5 shrink-0 shadow touch-target">
+          <i id="task-lock-icon" class="fa-solid fa-lock text-xs"></i>
+          <span id="task-lock-text">編輯鎖定</span>
+        </button>
+
+        <!-- Today's Tasks Heading & Batch Operations -->
+        <div class="flex items-center gap-1 shrink-0">
+          <span class="text-xs font-black text-sky-300 flex items-center gap-1 mr-1">
+            <i class="fa-solid fa-list-check text-sky-400 text-xs"></i> 全班任務:
+          </span>
+          <button id="btn-select-all" onclick="guardedSelectAllTasks()" 
+            class="px-2 py-0.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-[11px] font-black rounded border border-blue-400 transition touch-target">
+            全選
+          </button>
+          <button id="btn-unselect-all" onclick="guardedUnselectAllTasks()" 
+            class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 text-[11px] font-black rounded border border-slate-600 transition touch-target">
+            取消
+          </button>
+          <button id="btn-clear-today" onclick="guardedClearTodayTasks()" 
+            class="px-2 py-0.5 bg-rose-950 hover:bg-rose-800 active:scale-95 text-rose-200 text-[11px] font-black rounded border border-rose-700/60 transition disabled:opacity-40 disabled:cursor-not-allowed touch-target">
+            清空
+          </button>
+        </div>
+
+        <!-- Today's Active Tasks Container -->
+        <div id="today-tasks-container" class="flex-1 flex items-center gap-1.5 overflow-x-auto py-0.5 px-2 bg-slate-950/80 rounded-lg border border-slate-800/80 min-h-[34px] max-h-[42px] w-full sm:w-auto">
+          <!-- Rendered dynamically by JS -->
+        </div>
+      </div>
+
+      <!-- Right Sub-Block: Library & Custom Input -->
+      <div id="task-library-zone" class="flex items-center gap-1.5 shrink-0 overflow-x-auto pb-0.5 lg:pb-0">
+        <!-- Quick Add Custom Task Input -->
+        <div class="flex items-center gap-1 shrink-0">
+          <input id="custom-task-input" type="text" placeholder="新增作業..." maxlength="15"
+                 class="bg-slate-900 text-xs border border-slate-700 text-slate-100 px-2 py-1 rounded-lg focus:outline-none focus:border-sky-400 w-24 sm:w-28 placeholder-slate-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                 onkeydown="if(event.key==='Enter') guardedAddCustomTask()">
+          <button id="btn-add-custom" onclick="guardedAddCustomTask()" 
+            class="px-2.5 py-1 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white text-xs font-black rounded-lg transition border border-sky-400 disabled:opacity-40 disabled:cursor-not-allowed touch-target">
+            +
+          </button>
+        </div>
+
+        <span class="text-slate-600 font-black text-xs hidden sm:inline">|</span>
+
+        <!-- Preset Task Buttons Strip -->
+        <div id="preset-library-container" class="flex items-center gap-1 overflow-x-auto max-w-full sm:max-w-md lg:max-w-xl py-0.5">
+          <!-- Rendered dynamically by JS (contains 八格本 and presets) -->
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Top Edit Bar Controls (Only shown when Edit Mode is Active) -->
+  <div id="edit-banner" class="hidden glass-card p-2 mb-2 rounded-xl border border-amber-500/80 bg-amber-950/50 text-amber-100 text-xs flex flex-wrap items-center justify-between gap-2 shadow-lg shrink-0">
+    <div class="flex items-center gap-1.5 font-black text-xs sm:text-sm">
+      <i class="fa-solid fa-circle-exclamation text-amber-400 text-base animate-bounce"></i>
+      <span>編修模式已啟動：點擊各卡片座號可直接修改內容！</span>
+    </div>
+    <div class="flex items-center gap-1.5">
+      <button onclick="openStudentCountModal()" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-lg border border-indigo-400 transition flex items-center gap-1 shadow touch-target">
+        <i class="fa-solid fa-users-gear text-xs"></i> 班級人數 (<span id="banner-student-count">21</span>人)
+      </button>
+      <button onclick="addStudent()" class="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white font-black text-xs rounded-lg border border-amber-300 transition flex items-center gap-1 shadow touch-target">
+        <i class="fa-solid fa-user-plus text-xs"></i> +1
+      </button>
+      <button onclick="removeLastStudent()" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs rounded-lg border border-rose-300 transition flex items-center gap-1 shadow touch-target">
+        <i class="fa-solid fa-user-minus text-xs"></i> -1
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN EXPANDED STUDENT MATRIX (Auto-fills Remaining Vertical Space) -->
+  <main class="flex-1 min-h-0 flex flex-col justify-start">
+    <div id="student-grid" class="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 cols-screen-7 gap-1.5 sm:gap-2 auto-rows-fr overflow-y-auto pr-0.5">
+      <!-- Dynamically Rendered by JS -->
+    </div>
   </main>
 
-  <!-- 吐司通知提示 -->
-  <div class="toast" id="toastMessage">已複製連結至剪貼簿</div>
+  <!-- Page Bottom Center Subtitle Credit -->
+  <footer class="w-full text-center py-1 mt-0.5 shrink-0">
+    <div class="inline-flex items-center justify-center gap-2 px-4 py-0.5 rounded-full bg-slate-900/90 border border-slate-800 text-[11px] sm:text-xs font-black tracking-wider text-slate-400">
+      <span class="text-sky-400 font-black">班級百寶箱</span>
+      <span class="text-slate-600">|</span>
+      <span class="text-emerald-300 font-black">Design：S.C. Kuo</span>
+    </div>
+  </footer>
+
+  <!-- INDIVIDUAL STUDENT TASK ASSIGNMENT MODAL -->
+  <div id="individual-task-modal" onclick="handleBackdropClick(event, 'individual-task-modal')" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="glass-card max-w-xl w-full p-4 sm:p-5 rounded-2xl border-2 border-indigo-500/70 shadow-2xl max-h-[90vh] flex flex-col" onclick="event.stopPropagation()">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-2 border-b border-indigo-500/30 mb-3">
+        <div class="flex items-center gap-2 text-indigo-400">
+          <i class="fa-solid fa-user-pen text-xl sm:text-2xl"></i>
+          <div>
+            <h2 class="text-base sm:text-lg font-black text-white flex items-center gap-1.5">
+              <span>個別作業指派</span>
+              <span id="individual-target-badge" class="bg-indigo-900/90 text-indigo-200 text-xs px-2 py-0.5 rounded-md border border-indigo-400/50">01號</span>
+            </h2>
+            <p class="text-[11px] text-slate-300">為特定學生單獨安排個別進度、訂正或抽查作業</p>
+          </div>
+        </div>
+        <button onclick="closeIndividualTaskModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="flex-1 overflow-y-auto pr-1 space-y-3">
+        
+        <!-- Target Students Multi-Selector Strip -->
+        <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-black text-sky-300 flex items-center gap-1">
+              <i class="fa-solid fa-users text-[11px]"></i> 套用座號對象（可複選其他座號）：
+            </span>
+            <div class="flex items-center gap-1">
+              <button onclick="selectAllModalStudents()" class="text-[10px] text-sky-400 hover:underline">全選</button>
+              <span class="text-slate-600 text-xs">|</span>
+              <button onclick="selectOnlyCurrentModalStudent()" class="text-[10px] text-indigo-300 hover:underline">僅此號</button>
+            </div>
+          </div>
+          <div id="modal-student-checkboxes" class="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1 bg-slate-900/60 rounded-lg border border-slate-800">
+            <!-- Dynamically populated checkboxes for students -->
+          </div>
+        </div>
+
+        <!-- Quick Assign from Presets (Contains 八格本) -->
+        <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
+          <span class="text-xs font-black text-amber-300 flex items-center gap-1 mb-1.5">
+            <i class="fa-solid fa-bolt text-[11px]"></i> 點選資源庫快速指派：
+          </span>
+          <div id="modal-preset-chips" class="flex flex-wrap gap-1.5">
+            <!-- Dynamically generated preset chips -->
+          </div>
+        </div>
+
+        <!-- Add Custom Task for Individual -->
+        <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
+          <span class="text-xs font-black text-emerald-300 flex items-center gap-1 mb-1.5">
+            <i class="fa-solid fa-plus text-[11px]"></i> 自訂個別作業名稱：
+          </span>
+          <div class="flex items-center gap-1.5">
+            <input id="modal-custom-task-input" type="text" placeholder="例如：補交訂正、抽查..." maxlength="15"
+                   class="flex-1 bg-slate-900 text-xs border border-slate-700 text-slate-100 px-2.5 py-1.5 rounded-lg focus:outline-none focus:border-indigo-400 placeholder-slate-500"
+                   onkeydown="if(event.key==='Enter') applyCustomIndividualTask()">
+            <button onclick="applyCustomIndividualTask()"
+                    class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-black rounded-lg transition border border-indigo-400 touch-target">
+              指派新增
+            </button>
+          </div>
+        </div>
+
+        <!-- Currently Assigned Individual Tasks for Primary Student -->
+        <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
+          <div class="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+            <span class="text-xs font-black text-indigo-300 flex items-center gap-1">
+              <i class="fa-solid fa-star text-[11px] text-amber-400"></i> 目前已指派的個別作業清單：
+            </span>
+            <div class="flex items-center gap-1.5">
+              <span id="modal-current-student-label" class="text-[11px] text-slate-400 font-bold"></span>
+              <button onclick="clearCurrentStudentIndividualTasks()" title="清空此座號的所有個別作業"
+                class="px-2 py-0.5 bg-rose-950/90 hover:bg-rose-800 active:scale-95 text-rose-200 text-[10px] font-black rounded border border-rose-700/70 transition flex items-center gap-1 touch-target">
+                <i class="fa-solid fa-trash-can text-[9px]"></i> 清空此號
+              </button>
+              <button onclick="clearSelectedStudentsIndividualTasks()" title="清空所勾選所有座號的個別作業"
+                class="px-2 py-0.5 bg-rose-950/90 hover:bg-rose-800 active:scale-95 text-rose-200 text-[10px] font-black rounded border border-rose-700/70 transition flex items-center gap-1 touch-target">
+                <i class="fa-solid fa-users-slash text-[9px]"></i> 清空所選
+              </button>
+            </div>
+          </div>
+          <div id="modal-assigned-tasks-list" class="flex flex-wrap gap-1.5 min-h-[32px] p-1.5 bg-slate-900/50 rounded-lg border border-slate-800/80 items-center">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex justify-end pt-3 border-t border-slate-800 mt-2">
+        <button onclick="closeIndividualTaskModal()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow border border-indigo-400 transition touch-target">
+          完成返回
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Adjust Student Count Modal (20 ~ 26 Presets & 1~50 Custom) -->
+  <div id="student-count-modal" onclick="handleBackdropClick(event, 'student-count-modal')" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="glass-card max-w-md w-full p-5 rounded-2xl border-2 border-indigo-500/70 shadow-2xl" onclick="event.stopPropagation()">
+      <div class="flex items-center gap-2.5 text-indigo-400 mb-2">
+        <i class="fa-solid fa-users-gear text-2xl"></i>
+        <h2 class="text-lg font-black text-white">調整班級人數</h2>
+      </div>
+      <p class="text-xs text-slate-300 mb-3 leading-relaxed font-bold">
+        可點選常用班級規模快速套用，或自訂人數（調整後完整保留現有作業勾選狀態）：
+      </p>
+
+      <!-- Quick Preset Buttons (20 ~ 26 人) -->
+      <div id="preset-count-buttons" class="flex flex-wrap gap-1.5 mb-3">
+        <button onclick="setQuickCount(20)" data-count="20" class="px-3 py-1.5 bg-slate-800 hover:bg-indigo-600 text-slate-200 text-xs font-black rounded-lg border border-slate-700 transition touch-target">20 人</button>
+        <button onclick="setQuickCount(21)" data-count="21" class="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-black rounded-lg border-2 border-indigo-400 transition shadow touch-target">21 人 (預設)</button>
+        <button onclick="setQuickCount(22)" data-count="22" class="px-3 py-1.5 bg-slate-800 hover:bg-indigo-600 text-slate-200 text-xs font-black rounded-lg border border-slate-700 transition touch-target">22 人</button>
+        <button onclick="setQuickCount(23)" data-count="23" class="px-3 py-1.5 bg-slate-800 hover:bg-indigo-600 text-slate-200 text-xs font-black rounded-lg border border-slate-700 transition touch-target">23 人</button>
+        <button onclick="setQuickCount(24)" data-count="24" class="px-3 py-1.5 bg-slate-800 hover:bg-indigo-600 text-slate-200 text-xs font-black rounded-lg border border-slate-700 transition touch-target">24 人</button>
+        <button onclick="setQuickCount(25)" data-count="25" class="px-3 py-1.5 bg-slate-800 hover:bg-indigo-600 text-slate-200 text-xs font-black rounded-lg border border-slate-700 transition touch-target">25 人</button>
+        <button onclick="setQuickCount(26)" data-count="26" class="px-3 py-1.5 bg-slate-800 hover:bg-indigo-600 text-slate-200 text-xs font-black rounded-lg border border-slate-700 transition touch-target">26 人</button>
+      </div>
+
+      <!-- Numeric Input -->
+      <div class="flex items-center gap-2 mb-4">
+        <label for="student-count-input" class="text-xs font-black text-slate-200 whitespace-nowrap">自訂人數 (1~50)：</label>
+        <input id="student-count-input" type="number" min="1" max="50" value="21"
+               onkeydown="if(event.key==='Enter') applyStudentCount()"
+               class="bg-slate-900 border-2 border-indigo-500 text-indigo-200 font-num font-black text-lg px-3 py-1.5 rounded-xl focus:outline-none focus:border-indigo-400 w-24 text-center">
+      </div>
+
+      <div class="flex justify-end gap-2">
+        <button onclick="closeStudentCountModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-black text-xs rounded-xl transition touch-target">
+          取消
+        </button>
+        <button onclick="applyStudentCount()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow border border-indigo-400 transition touch-target">
+          確認變更
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reset Confirmation Modal -->
+  <div id="reset-modal" onclick="handleBackdropClick(event, 'reset-modal')" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="glass-card max-w-md w-full p-5 rounded-2xl border-2 border-rose-500/70 shadow-2xl" onclick="event.stopPropagation()">
+      <div class="flex items-center gap-2.5 text-rose-400 mb-2">
+        <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+        <h2 class="text-lg font-black text-white">清空作業紀錄？</h2>
+      </div>
+      <p id="reset-modal-desc" class="text-xs text-slate-300 mb-4 leading-relaxed font-bold">
+        這將重設全班所有座號的作業勾選狀態。建議在新的一天或新的一週開始時使用。
+      </p>
+      <div class="flex justify-end gap-2">
+        <button onclick="closeResetModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-black text-xs rounded-xl transition touch-target">
+          取消
+        </button>
+        <button onclick="confirmResetAll()" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs rounded-xl shadow border border-rose-400 transition touch-target">
+          確定清空
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Capsule -->
+  <div id="toast-message" class="fixed bottom-6 right-6 bg-sky-600 text-white text-xs sm:text-sm font-black px-4 py-2.5 rounded-xl shadow-2xl border border-sky-300 transition-all duration-300 opacity-0 transform translate-y-4 pointer-events-none z-50 flex items-center gap-2">
+    <i class="fa-solid fa-circle-check text-sky-200 text-base"></i>
+    <span id="toast-text">系統訊息</span>
+  </div>
 
   <script>
-    // 預設站點資料清單（依序排列）
-    let siteRegistry = [
-      {
-        id: 'site-1',
-        title: '午餐節奏引導',
-        url: 'https://chien00-tw.github.io/lunch/',
-        tag: '生活指引',
-        isDefault: true
-      },
-      {
-        id: 'site-2',
-        title: '班級任務進度牆',
-        url: 'https://chien00-tw.github.io/ailab-classtask/',
-        tag: '任務看板',
-        isDefault: true
-      },
-      {
-        id: 'site-3',
-        title: '考場資訊系統',
-        url: 'https://chien00-tw.github.io/ailab-exam-timer/',
-        tag: '測驗計時',
-        isDefault: true
-      },
-      {
-        id: 'site-4',
-        title: '課堂計時系統',
-        url: 'https://chien00-tw.github.io/ailab_timer/',
-        tag: '教學節奏',
-        isDefault: true
-      },
-      {
-        id: 'site-5',
-        title: '課堂抽籤系統',
-        url: 'https://chien00-tw.github.io/ailab_Classroom_Random_Selector/',
-        tag: '隨機點名',
-        isDefault: true
-      },
-      {
-        id: 'site-6',
-        title: '班級座位編排',
-        url: 'https://chien00-tw.github.io/ailab_seating_master/',
-        tag: '空間配置',
-        isDefault: true
-      },
-      {
-        id: 'site-7',
-        title: '打掃工作分配',
-        url: 'https://chien00-tw.github.io/ailab-cleaning-duty-chart/',
-        tag: '勤務分工',
-        isDefault: true
-      }
+    // System State Management (v3.4 Dynamic Individual Tasks Architecture)
+    const DEFAULT_STUDENT_COUNT = 21;
+    
+    // Default Preset Tasks including "八格本"
+    const defaultPresetTasks = [
+      "圈詞", "數習", "作文", "甲本", "乙本", "學習單", 
+      "聯絡簿", "通知單回條", "國語練習單", "數學練習單", 
+      "生活札記", "數重本", "考卷訂正", "閱讀心得", "八格本"
     ];
 
-    let currentActiveId = siteRegistry[0].id;
-    let loadTimeoutTimer = null;
-    let toastTimer = null;
+    let state = {
+      version: "v3.5",
+      isEditMode: false,
+      isTaskPanelLocked: true,
+      isTaskPanelCollapsed: false,
+      totalStudents: DEFAULT_STUDENT_COUNT,
+      presetTasks: [...defaultPresetTasks],
+      todayTasks: [],
+      students: [],
+      hasPlayed100Celebration: false
+    };
 
-    // DOM 節點快取
-    const siteListContainer = document.getElementById('siteListContainer');
-    const contentFrame = document.getElementById('contentFrame');
-    const loadingOverlay = document.getElementById('loadingOverlay');
-    const cspBanner = document.getElementById('cspBanner');
-    const currentTitle = document.getElementById('currentTitle');
-    const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
-    const sidebar = document.getElementById('sidebar');
-    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
-    const reloadFrameBtn = document.getElementById('reloadFrameBtn');
-    const copyUrlBtn = document.getElementById('copyUrlBtn');
-    const openTabBtn = document.getElementById('openTabBtn');
-    const bannerOpenBtn = document.getElementById('bannerOpenBtn');
-    const toastMessage = document.getElementById('toastMessage');
+    // Current focused student for individual task modal
+    let activeModalStudentId = null;
+    let selectedModalStudentIds = new Set();
 
-    // 渲染站點列表
-    function renderSites() {
-      siteListContainer.innerHTML = '';
-      siteRegistry.forEach(site => {
-        const li = document.createElement('li');
-        li.className = `site-item ${site.id === currentActiveId ? 'active' : ''}`;
+    // Shared AudioContext for cross-platform iOS & iPadOS compatibility
+    let sharedAudioCtx = null;
+    function getAudioContext() {
+      try {
+        if (!sharedAudioCtx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) sharedAudioCtx = new AudioCtx();
+        }
+        if (sharedAudioCtx && sharedAudioCtx.state === 'suspended') {
+          sharedAudioCtx.resume();
+        }
+        return sharedAudioCtx;
+      } catch (e) {
+        console.warn('AudioContext init error:', e);
+        return null;
+      }
+    }
+
+    // Touch gesture unlock listener for mobile Web Audio API
+    window.addEventListener('click', () => { getAudioContext(); }, { once: true });
+    window.addEventListener('touchstart', () => { getAudioContext(); }, { once: true });
+
+    // Synthesized Celebratory Chime Sound using Web Audio API
+    function playJoyfulCelebrationSound() {
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+
+        const notes = [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50, 1318.51];
+        const noteDuration = 0.11;
+
+        notes.forEach((freq, index) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+
+          osc.type = index % 2 === 0 ? 'triangle' : 'sine';
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + index * noteDuration);
+
+          gain.gain.setValueAtTime(0.01, ctx.currentTime + index * noteDuration);
+          gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + index * noteDuration + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + index * noteDuration + noteDuration * 1.4);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+
+          osc.start(ctx.currentTime + index * noteDuration);
+          osc.stop(ctx.currentTime + index * noteDuration + noteDuration * 1.5);
+        });
+      } catch (err) {
+        console.warn('Audio playback error:', err);
+      }
+    }
+
+    function triggerCelebrationEffects() {
+      playJoyfulCelebrationSound();
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 140,
+          spread: 85,
+          origin: { y: 0.55 }
+        });
+        setTimeout(() => {
+          confetti({ particleCount: 75, angle: 60, spread: 55, origin: { x: 0 } });
+          confetti({ particleCount: 75, angle: 120, spread: 55, origin: { x: 1 } });
+        }, 280);
+      }
+      showToast("🎉 太棒了！全班所有任務已 100% 全部完成！");
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      initClock();
+      renderAll();
+      initGlobalShortcuts();
+    });
+
+    // Real-time Clock & Date Timer (HH:mm & YYYY年MM月DD日)
+    function initClock() {
+      const updateClock = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hrs = String(now.getHours()).padStart(2, '0');
+        const mins = String(now.getMinutes()).padStart(2, '0');
+
+        const clockEl = document.getElementById('clock-display');
+        if (clockEl) clockEl.textContent = `${hrs}:${mins}`;
         
-        li.innerHTML = `
-          <button class="site-btn" data-id="${site.id}">
-            <span>${escapeHTML(site.title)}</span>
-            <span class="site-tag">${escapeHTML(site.tag)}</span>
-          </button>
+        const dateEl = document.getElementById('current-date-text');
+        if (dateEl) dateEl.textContent = `${year}年${month}月${day}日`;
+      };
+      updateClock();
+      setInterval(updateClock, 1000);
+    }
+
+    function loadState() {
+      const saved = localStorage.getItem('classTaskState_v3.5') || 
+                    localStorage.getItem('classTaskState_v3.4') || 
+                    localStorage.getItem('classTaskState_v3.3') || 
+                    localStorage.getItem('classTaskState_v3.2') || 
+                    localStorage.getItem('classTaskState_v3.1');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && Array.isArray(parsed.students) && parsed.students.length > 0) {
+            state = { ...state, ...parsed };
+            state.version = "v3.5";
+            state.isEditMode = false;
+            state.isTaskPanelLocked = true;
+            state.hasPlayed100Celebration = false;
+            
+            // Ensure "八格本" is present in preset tasks
+            if (!state.presetTasks.includes("八格本")) {
+              state.presetTasks.push("八格本");
+            }
+
+            state.students.forEach(s => {
+              if (s.name && s.name.includes("學生")) {
+                s.name = s.name.replace(/學生\s*/g, '');
+              }
+              // Ensure individualTasks array exists on each student
+              if (!Array.isArray(s.individualTasks)) {
+                s.individualTasks = [];
+              }
+              if (!Array.isArray(s.completedTasks)) {
+                s.completedTasks = [];
+              }
+            });
+            state.totalStudents = state.students.length;
+            return;
+          }
+        } catch (e) {
+          console.warn('Fallback rebuilding defaults.', e);
+        }
+      }
+      
+      generateDefaultStudents(DEFAULT_STUDENT_COUNT);
+      saveState();
+    }
+
+    function generateDefaultStudents(count) {
+      state.totalStudents = count;
+      state.students = Array.from({ length: count }, (_, i) => ({
+        id: i + 1,
+        number: String(i + 1).padStart(2, '0'),
+        name: `${i + 1}號`,
+        completedTasks: [],
+        individualTasks: []
+      }));
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem('classTaskState_v3.5', JSON.stringify(state));
+      } catch (e) {
+        console.error('LocalStorage save failed:', e);
+      }
+    }
+
+    function renderAll() {
+      renderStudentGrid();
+      renderTodayTasks();
+      renderPresetLibrary();
+      updateProgressMetrics();
+      updateEditBanner();
+      updateTaskLockUI();
+      applyPanelCollapseState();
+    }
+
+    // Dynamic Font & Layout Scaling Engine for Individual Student Cards
+    function getTaskLayoutConfig(taskCount) {
+      if (taskCount <= 2) {
+        return {
+          cardPadding: 'p-1.5 sm:p-2',
+          seatNumSize: 'text-base sm:text-lg',
+          rateSize: 'text-xs sm:text-sm',
+          containerGap: 'gap-1 my-1',
+          btnPadding: 'px-2 py-0.5',
+          fontSize: 'text-xs',
+          iconSize: 'text-[10px]',
+          maxTextWidth: 'max-w-[85px] sm:max-w-none'
+        };
+      } else if (taskCount <= 4) {
+        return {
+          cardPadding: 'p-1.5 sm:p-2',
+          seatNumSize: 'text-sm sm:text-base',
+          rateSize: 'text-xs',
+          containerGap: 'gap-1 my-0.5',
+          btnPadding: 'px-1.5 py-0.5',
+          fontSize: 'text-[11px]',
+          iconSize: 'text-[9px]',
+          maxTextWidth: 'max-w-[76px] sm:max-w-none'
+        };
+      } else if (taskCount <= 6) {
+        return {
+          cardPadding: 'p-1.5',
+          seatNumSize: 'text-xs sm:text-sm',
+          rateSize: 'text-[11px]',
+          containerGap: 'gap-0.5 my-0.5',
+          btnPadding: 'px-1 py-[2px]',
+          fontSize: 'text-[10px]',
+          iconSize: 'text-[8px]',
+          maxTextWidth: 'max-w-[68px] sm:max-w-none'
+        };
+      } else if (taskCount <= 8) {
+        return {
+          cardPadding: 'p-1',
+          seatNumSize: 'text-xs',
+          rateSize: 'text-[10px]',
+          containerGap: 'gap-0.5 my-0.5',
+          btnPadding: 'px-1 py-[1px]',
+          fontSize: 'text-[9px]',
+          iconSize: 'text-[7px]',
+          maxTextWidth: 'max-w-[58px] sm:max-w-none'
+        };
+      } else {
+        return {
+          cardPadding: 'p-1',
+          seatNumSize: 'text-[11px]',
+          rateSize: 'text-[9px]',
+          containerGap: 'gap-[2px] my-[1px]',
+          btnPadding: 'px-0.5 py-0',
+          fontSize: 'text-[8px]',
+          iconSize: 'text-[6px]',
+          maxTextWidth: 'max-w-[50px] sm:max-w-none'
+        };
+      }
+    }
+
+    function renderStudentGrid() {
+      const grid = document.getElementById('student-grid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      const totalCount = state.students.length;
+      grid.classList.remove('cols-screen-7', 'cols-screen-8', 'cols-screen-9');
+      if (totalCount >= 22 && totalCount <= 24) {
+        grid.classList.add('cols-screen-8');
+      } else if (totalCount >= 25 && totalCount <= 27) {
+        grid.classList.add('cols-screen-9');
+      } else {
+        grid.classList.add('cols-screen-7');
+      }
+
+      state.students.forEach((student, index) => {
+        // Effective assigned tasks for this student (Class tasks + Individual tasks)
+        const individualTasks = Array.isArray(student.individualTasks) ? student.individualTasks : [];
+        const allAssignedTasks = [...new Set([...state.todayTasks, ...individualTasks])];
+        const totalAssigned = allAssignedTasks.length;
+
+        const layoutCfg = getTaskLayoutConfig(totalAssigned);
+
+        const completedCount = student.completedTasks.filter(t => allAssignedTasks.includes(t)).length;
+        const rate = totalAssigned > 0 ? Math.round((completedCount / totalAssigned) * 100) : 0;
+        const isAllDone = totalAssigned > 0 && rate === 100;
+
+        const card = document.createElement('div');
+        card.className = `glass-card rounded-xl ${layoutCfg.cardPadding} flex flex-col justify-between transition-all duration-200 relative ${isAllDone ? 'glass-card-complete' : ''}`;
+        
+        let tasksHtml = '';
+        if (totalAssigned === 0) {
+          tasksHtml = `
+            <div class="text-[11px] text-slate-500 font-bold my-auto text-center py-2 bg-slate-950/50 rounded-lg border border-slate-800/60 flex flex-col items-center justify-center gap-1">
+              <span>待機中</span>
+              <button onclick="guardedOpenIndividualTaskModal(${student.id})" class="text-[10px] text-indigo-400 hover:text-indigo-300 font-black flex items-center gap-0.5">
+                <i class="fa-solid fa-plus text-[8px]"></i> 個別作業
+              </button>
+            </div>
+          `;
+        } else {
+          tasksHtml = `<div class="flex flex-wrap ${layoutCfg.containerGap} items-center content-start flex-1 overflow-y-auto">`;
+          
+          allAssignedTasks.forEach(taskName => {
+            const isDone = student.completedTasks.includes(taskName);
+            const isIndividual = individualTasks.includes(taskName);
+            
+            // Visual style difference for individual tasks vs class tasks
+            let btnStyle = "";
+            if (isDone) {
+              btnStyle = isIndividual
+                ? 'bg-amber-400 text-slate-950 font-black shadow-md shadow-amber-950 border border-amber-300'
+                : 'bg-emerald-400 text-slate-950 font-black shadow-md shadow-emerald-950 border border-emerald-300';
+            } else {
+              btnStyle = isIndividual
+                ? 'bg-indigo-950/90 text-indigo-200 hover:bg-indigo-900 border border-indigo-500/70 hover:border-indigo-400'
+                : 'bg-slate-800/90 text-slate-200 hover:bg-slate-700 border border-slate-700 hover:border-sky-400';
+            }
+
+            tasksHtml += `
+              <button onclick="toggleStudentTask(${student.id}, '${taskName}')" 
+                title="${isIndividual ? '⭐ 個別專屬作業：' + taskName : '全班任務：' + taskName}"
+                class="${layoutCfg.btnPadding} rounded-lg ${layoutCfg.fontSize} font-black transition flex items-center gap-0.5 active:scale-95 touch-target shadow-sm ${btnStyle}">
+                <i class="fa-solid ${isDone ? 'fa-check-double ' + layoutCfg.iconSize : (isIndividual ? 'fa-star text-amber-400 ' + layoutCfg.iconSize : 'fa-square text-slate-500 ' + layoutCfg.iconSize)}"></i>
+                <span class="${layoutCfg.maxTextWidth}">${taskName}</span>
+              </button>
+            `;
+          });
+          tasksHtml += `</div>`;
+        }
+
+        const editableClass = state.isEditMode ? 'editable-active' : '';
+
+        card.innerHTML = `
+          <div class="flex-1 min-h-0 flex flex-col">
+            <div class="flex items-center justify-between pb-0.5 border-b border-slate-800/80 shrink-0 mb-0.5">
+              
+              <!-- Seat Number & Individual Assignment Trigger -->
+              <div class="flex items-center gap-1">
+                <span class="font-num ${layoutCfg.seatNumSize} font-black text-sky-400 tracking-wide ${editableClass}" 
+                      data-field="number" data-index="${index}" 
+                      contenteditable="${state.isEditMode}" 
+                      onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+                      onblur="updateStudentText(event, ${index}, 'number')">${student.number}</span>
+                
+                <!-- Individual Task Button -->
+                <button onclick="guardedOpenIndividualTaskModal(${student.id})" title="為 ${student.number} 單獨指派或移除個別作業"
+                  class="px-1 py-0.5 bg-indigo-950/90 hover:bg-indigo-700 active:scale-90 text-[10px] font-black text-indigo-300 rounded border border-indigo-500/50 transition flex items-center gap-0.5 touch-target">
+                  <i class="fa-solid fa-plus text-[8px]"></i>個別
+                  ${individualTasks.length > 0 ? `<span class="bg-amber-400 text-slate-950 rounded-full px-1 text-[8px] leading-tight font-black">${individualTasks.length}</span>` : ''}
+                </button>
+
+                <!-- Quick Clear Individual Tasks Button for this student -->
+                ${individualTasks.length > 0 ? `
+                <button onclick="guardedClearSingleStudentIndividualTasks(${student.id})" title="一鍵清除 ${student.number} 的個別作業 (${individualTasks.length}項)"
+                  class="w-5 h-5 bg-rose-950/80 hover:bg-rose-700 active:scale-90 text-rose-300 rounded border border-rose-700/60 transition flex items-center justify-center text-[9px] touch-target">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>` : ''}
+              </div>
+
+              <!-- Completion Rate -->
+              <span class="${layoutCfg.rateSize} font-black ${isAllDone ? 'text-emerald-300 font-extrabold' : 'text-sky-400'} font-num">
+                ${rate}%
+              </span>
+            </div>
+
+            ${tasksHtml}
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden mt-1 border border-slate-800/80 shrink-0">
+            <div class="h-full transition-all duration-300 ${isAllDone ? 'bg-emerald-400 shadow-sm shadow-emerald-400' : 'bg-sky-500'}" style="width: ${rate}%"></div>
+          </div>
         `;
 
-        siteListContainer.appendChild(li);
-      });
-
-      bindItemEvents();
-    }
-
-    // 綁定項目點擊事件
-    function bindItemEvents() {
-      document.querySelectorAll('.site-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const targetId = btn.dataset.id;
-          activateSite(targetId);
-        });
+        grid.appendChild(card);
       });
     }
 
-    // 切換指定站點
-    function activateSite(siteId) {
-      const site = siteRegistry.find(s => s.id === siteId);
-      if (!site) return;
+    function renderTodayTasks() {
+      const container = document.getElementById('today-tasks-container');
+      if (!container) return;
+      container.innerHTML = '';
 
-      currentActiveId = site.id;
-      currentTitle.textContent = site.title;
-
-      // 啟動遮罩動畫與旗標重置
-      loadingOverlay.classList.remove('hidden');
-      cspBanner.classList.remove('visible');
-
-      contentFrame.src = site.url;
-      renderSites();
-
-      // 設定 5 秒檢查機制，若有安全性標頭阻擋即提示外部開啟
-      clearTimeout(loadTimeoutTimer);
-      loadTimeoutTimer = setTimeout(() => {
-        loadingOverlay.classList.add('hidden');
-        cspBanner.classList.add('visible');
-      }, 5000);
-
-      // 行動裝置點選後自動收回抽屜並隱藏遮罩
-      if (window.innerWidth <= 860) {
-        closeMobileSidebar();
+      if (state.todayTasks.length === 0) {
+        container.innerHTML = `<span class="text-[11px] text-slate-500 font-bold italic py-0.5"><i class="fa-solid fa-arrow-right text-sky-400"></i> 點選右側作業加入全班任務...</span>`;
+        return;
       }
+
+      state.todayTasks.forEach(taskName => {
+        const pill = document.createElement('div');
+        pill.className = 'bg-sky-600/30 border border-sky-400/80 text-sky-100 px-2 py-0.5 rounded-lg text-xs font-black flex items-center gap-1.5 shrink-0 shadow-sm';
+        
+        const removeBtnHtml = state.isTaskPanelLocked 
+          ? `<span class="text-[10px] text-sky-400/60" title="編輯鎖定中"><i class="fa-solid fa-lock"></i></span>`
+          : `<button onclick="removeTodayTask('${taskName}')" title="移除任務" class="text-sky-200 hover:text-rose-400 transition p-0.5 touch-target flex items-center justify-center">
+               <i class="fa-solid fa-xmark text-xs"></i>
+             </button>`;
+
+        pill.innerHTML = `
+          <span>+ ${taskName}</span>
+          ${removeBtnHtml}
+        `;
+        container.appendChild(pill);
+      });
     }
 
-    // 關閉行動端抽屜式選單
-    function closeMobileSidebar() {
-      sidebar.classList.remove('mobile-open');
-      if (sidebarBackdrop) {
-        sidebarBackdrop.classList.remove('active');
-      }
+    function renderPresetLibrary() {
+      const container = document.getElementById('preset-library-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      state.presetTasks.forEach(taskName => {
+        const isAdded = state.todayTasks.includes(taskName);
+        const btn = document.createElement('button');
+        btn.onclick = () => guardedAddTodayTask(taskName);
+        btn.disabled = isAdded;
+        btn.className = `px-2 py-1 rounded-lg text-xs font-bold transition border shrink-0 flex items-center gap-1 active:scale-95 touch-target ${
+          isAdded
+            ? 'bg-slate-900/60 text-slate-600 border-slate-800 cursor-not-allowed opacity-40'
+            : state.isTaskPanelLocked
+              ? 'bg-slate-800/80 text-slate-300 border-slate-700 hover:border-amber-400 hover:text-amber-200'
+              : 'bg-slate-800 hover:bg-sky-900/60 text-slate-100 hover:text-sky-100 border-slate-700 hover:border-sky-400'
+        }`;
+        btn.innerHTML = `<span>+ ${taskName}</span>`;
+        container.appendChild(btn);
+      });
     }
 
-    // 監聽 iframe 完成載入事件（排除初始空白頁誤判）
-    contentFrame.addEventListener('load', () => {
-      if (!contentFrame.src || contentFrame.src === 'about:blank') return;
-      clearTimeout(loadTimeoutTimer);
-      loadingOverlay.classList.add('hidden');
-      cspBanner.classList.remove('visible');
-    });
+    function guardedOpenIndividualTaskModal(studentId) {
+      if (state.isTaskPanelLocked) {
+        showToast("⚠️ 目前為「編輯鎖定」！如需單獨指派作業請先點擊「開放編輯」");
+        return;
+      }
+      openIndividualTaskModal(studentId);
+    }
 
-    // 側邊欄展開收合切換
-    toggleSidebarBtn.addEventListener('click', () => {
-      if (window.innerWidth <= 860) {
-        const isOpen = sidebar.classList.toggle('mobile-open');
-        if (sidebarBackdrop) {
-          sidebarBackdrop.classList.toggle('active', isOpen);
+    function openIndividualTaskModal(studentId) {
+      activeModalStudentId = studentId;
+      selectedModalStudentIds = new Set([studentId]);
+
+      const student = state.students.find(s => s.id === studentId);
+      if (!student) return;
+
+      const badge = document.getElementById('individual-target-badge');
+      if (badge) badge.textContent = `${student.number} (主要)`;
+
+      renderModalStudentCheckboxes();
+      renderModalPresetChips();
+      renderModalAssignedTasks();
+
+      const modal = document.getElementById('individual-task-modal');
+      if (modal) modal.classList.remove('hidden');
+
+      const customInput = document.getElementById('modal-custom-task-input');
+      if (customInput) customInput.value = '';
+    }
+
+    function closeIndividualTaskModal() {
+      const modal = document.getElementById('individual-task-modal');
+      if (modal) modal.classList.add('hidden');
+      activeModalStudentId = null;
+      selectedModalStudentIds.clear();
+      renderStudentGrid();
+      updateProgressMetrics();
+    }
+
+    function renderModalStudentCheckboxes() {
+      const container = document.getElementById('modal-student-checkboxes');
+      if (!container) return;
+      container.innerHTML = '';
+
+      state.students.forEach(st => {
+        const isSelected = selectedModalStudentIds.has(st.id);
+        const isPrimary = st.id === activeModalStudentId;
+
+        const pill = document.createElement('button');
+        pill.type = 'button';
+        pill.onclick = () => toggleModalStudentSelection(st.id);
+        pill.className = `px-2 py-0.5 rounded text-xs font-bold transition border flex items-center gap-1 ${
+          isSelected 
+            ? (isPrimary 
+                ? 'bg-indigo-600 text-white border-indigo-400 ring-1 ring-indigo-300' 
+                : 'bg-sky-700 text-white border-sky-400')
+            : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+        }`;
+        pill.innerHTML = `
+          <i class="fa-solid ${isSelected ? 'fa-check-square' : 'fa-square text-slate-500'} text-[10px]"></i>
+          <span>${st.number}</span>
+        `;
+        container.appendChild(pill);
+      });
+    }
+
+    function toggleModalStudentSelection(studentId) {
+      if (selectedModalStudentIds.has(studentId)) {
+        // Prevent deselecting if it's the only one selected
+        if (selectedModalStudentIds.size > 1) {
+          selectedModalStudentIds.delete(studentId);
+        } else {
+          showToast("至少需選取一位指派座號！");
         }
       } else {
-        sidebar.classList.toggle('collapsed');
+        selectedModalStudentIds.add(studentId);
       }
-    });
-
-    // 點擊遮罩直接關閉行動端側邊欄
-    if (sidebarBackdrop) {
-      sidebarBackdrop.addEventListener('click', closeMobileSidebar);
+      renderModalStudentCheckboxes();
+      renderModalAssignedTasks();
     }
 
-    // 重新載入當前 iframe（深度相容跨域重整）
-    reloadFrameBtn.addEventListener('click', () => {
-      const activeSite = siteRegistry.find(s => s.id === currentActiveId);
-      if (!activeSite) return;
+    function selectAllModalStudents() {
+      state.students.forEach(s => selectedModalStudentIds.add(s.id));
+      renderModalStudentCheckboxes();
+      renderModalAssignedTasks();
+    }
 
-      loadingOverlay.classList.remove('hidden');
-      cspBanner.classList.remove('visible');
-
-      try {
-        contentFrame.contentWindow.location.reload();
-      } catch (e) {
-        // 跨網域存取限制時之重載備援機制
-        const targetUrl = activeSite.url;
-        contentFrame.src = 'about:blank';
-        setTimeout(() => {
-          contentFrame.src = targetUrl;
-        }, 50);
+    function selectOnlyCurrentModalStudent() {
+      if (activeModalStudentId) {
+        selectedModalStudentIds = new Set([activeModalStudentId]);
+        renderModalStudentCheckboxes();
+        renderModalAssignedTasks();
       }
+    }
 
-      clearTimeout(loadTimeoutTimer);
-      loadTimeoutTimer = setTimeout(() => {
-        loadingOverlay.classList.add('hidden');
-        cspBanner.classList.add('visible');
-      }, 5000);
+    function renderModalPresetChips() {
+      const container = document.getElementById('modal-preset-chips');
+      if (!container) return;
+      container.innerHTML = '';
 
-      showToast('正在重新載入頁面...');
-    });
+      state.presetTasks.forEach(taskName => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.onclick = () => assignIndividualTask(taskName);
+        btn.className = 'px-2 py-1 bg-slate-800 hover:bg-indigo-600 text-slate-200 hover:text-white rounded-lg text-xs font-black border border-slate-700 hover:border-indigo-400 transition active:scale-95 touch-target shadow-sm flex items-center gap-1';
+        btn.innerHTML = `<i class="fa-solid fa-plus text-[9px] text-indigo-400"></i> ${taskName}`;
+        container.appendChild(btn);
+      });
+    }
 
-    // 複製連結功能（相容 iOS/Android 及受限嵌入環境）
-    copyUrlBtn.addEventListener('click', () => {
-      const activeSite = siteRegistry.find(s => s.id === currentActiveId);
-      if (!activeSite) return;
+    function assignIndividualTask(taskName) {
+      if (!taskName) return;
+      const count = selectedModalStudentIds.size;
+      let addedToAny = false;
 
-      const textarea = document.createElement('textarea');
-      textarea.value = activeSite.url;
-      textarea.setAttribute('readonly', '');
-      textarea.style.position = 'fixed';
-      textarea.style.left = '-9999px';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.select();
-      textarea.setSelectionRange(0, 99999);
+      selectedModalStudentIds.forEach(id => {
+        const student = state.students.find(s => s.id === id);
+        if (student) {
+          if (!Array.isArray(student.individualTasks)) student.individualTasks = [];
+          if (!student.individualTasks.includes(taskName)) {
+            student.individualTasks.push(taskName);
+            addedToAny = true;
+          }
+        }
+      });
 
-      let isSuccess = false;
-      try {
-        isSuccess = document.execCommand('copy');
-      } catch (err) {
-        isSuccess = false;
-      }
-      document.body.removeChild(textarea);
-
-      if (isSuccess) {
-        showToast(`已複製「${activeSite.title}」網址！`);
+      if (addedToAny) {
+        saveState();
+        renderModalAssignedTasks();
+        renderStudentGrid();
+        updateProgressMetrics();
+        showToast(`已指派個別作業「${taskName}」至 ${count} 位座號`);
       } else {
-        showToast('複製失敗，請手動複製連結');
-      }
-    });
-
-    // 開啟外部獨立分頁
-    function openExternalCurrent() {
-      const activeSite = siteRegistry.find(s => s.id === currentActiveId);
-      if (activeSite) {
-        window.open(activeSite.url, '_blank', 'noopener,noreferrer');
+        showToast(`所選座號已包含「${taskName}」個別作業`);
       }
     }
-    openTabBtn.addEventListener('click', openExternalCurrent);
-    bannerOpenBtn.addEventListener('click', openExternalCurrent);
 
-    // 吐司提示訊息（修復連續觸發計時器疊加問題）
-    function showToast(text) {
-      toastMessage.textContent = text;
-      toastMessage.classList.add('show');
-      clearTimeout(toastTimer);
+    function applyCustomIndividualTask() {
+      const input = document.getElementById('modal-custom-task-input');
+      if (!input) return;
+      const val = input.value.trim();
+      if (!val) return;
+
+      if (!state.presetTasks.includes(val)) {
+        state.presetTasks.push(val);
+        renderPresetLibrary();
+        renderModalPresetChips();
+      }
+
+      assignIndividualTask(val);
+      input.value = '';
+    }
+
+    function removeIndividualTask(studentId, taskName) {
+      const student = state.students.find(s => s.id === studentId);
+      if (!student || !Array.isArray(student.individualTasks)) return;
+
+      student.individualTasks = student.individualTasks.filter(t => t !== taskName);
+      // Also remove from completedTasks if present
+      const cIdx = student.completedTasks.indexOf(taskName);
+      if (cIdx > -1 && !state.todayTasks.includes(taskName)) {
+        student.completedTasks.splice(cIdx, 1);
+      }
+
+      saveState();
+      renderModalAssignedTasks();
+      renderStudentGrid();
+      updateProgressMetrics();
+      showToast(`已自 ${student.number} 移除個別作業「${taskName}」`);
+    }
+
+    function guardedClearSingleStudentIndividualTasks(studentId) {
+      if (state.isTaskPanelLocked) {
+        showToast("⚠️ 目前為「編輯鎖定」！如需清除個別作業請先點擊「開放編輯」");
+        return;
+      }
+      clearStudentIndividualTasks(studentId);
+    }
+
+    function clearStudentIndividualTasks(studentId) {
+      const student = state.students.find(s => s.id === studentId);
+      if (!student || !Array.isArray(student.individualTasks) || student.individualTasks.length === 0) return;
+
+      const removedCount = student.individualTasks.length;
+      // Clean up completedTasks for any individual tasks not in todayTasks
+      student.completedTasks = student.completedTasks.filter(t => state.todayTasks.includes(t));
+      student.individualTasks = [];
+
+      saveState();
+      renderStudentGrid();
+      updateProgressMetrics();
+      showToast(`已清空 ${student.number} 的所有個別作業 (共 ${removedCount} 項)`);
+    }
+
+    function clearCurrentStudentIndividualTasks() {
+      if (!activeModalStudentId) return;
+      const student = state.students.find(s => s.id === activeModalStudentId);
+      if (!student || !Array.isArray(student.individualTasks) || student.individualTasks.length === 0) {
+        showToast("此座號目前無個別作業可清除");
+        return;
+      }
+      clearStudentIndividualTasks(activeModalStudentId);
+      renderModalAssignedTasks();
+    }
+
+    function clearSelectedStudentsIndividualTasks() {
+      if (selectedModalStudentIds.size === 0) {
+        showToast("請先勾選欲清除個別作業的座號");
+        return;
+      }
+
+      let totalCleared = 0;
+      let affectedStudents = 0;
+
+      selectedModalStudentIds.forEach(id => {
+        const student = state.students.find(s => s.id === id);
+        if (student && Array.isArray(student.individualTasks) && student.individualTasks.length > 0) {
+          totalCleared += student.individualTasks.length;
+          student.completedTasks = student.completedTasks.filter(t => state.todayTasks.includes(t));
+          student.individualTasks = [];
+          affectedStudents++;
+        }
+      });
+
+      if (totalCleared > 0) {
+        saveState();
+        renderModalAssignedTasks();
+        renderStudentGrid();
+        updateProgressMetrics();
+        showToast(`已清空 ${affectedStudents} 位座號的個別作業 (共 ${totalCleared} 項)`);
+      } else {
+        showToast("所選座號目前均無個別作業");
+      }
+    }
+
+    function renderModalAssignedTasks() {
+      const container = document.getElementById('modal-assigned-tasks-list');
+      const label = document.getElementById('modal-current-student-label');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const primaryStudent = state.students.find(s => s.id === activeModalStudentId);
+      if (!primaryStudent) return;
+
+      if (label) {
+        label.textContent = `${primaryStudent.number} 目前個別作業`;
+      }
+
+      const tasks = Array.isArray(primaryStudent.individualTasks) ? primaryStudent.individualTasks : [];
+      if (tasks.length === 0) {
+        container.innerHTML = `<span class="text-xs text-slate-500 italic py-1">目前無個別專屬作業，點選上方標籤即可為其單獨指派</span>`;
+        return;
+      }
+
+      tasks.forEach(taskName => {
+        const chip = document.createElement('div');
+        chip.className = 'bg-indigo-900/60 border border-indigo-400 text-indigo-100 px-2 py-0.5 rounded-lg text-xs font-black flex items-center gap-1.5 shadow';
+        chip.innerHTML = `
+          <span>⭐ ${taskName}</span>
+          <button onclick="removeIndividualTask(${primaryStudent.id}, '${taskName}')" title="移除此作業"
+            class="text-indigo-300 hover:text-rose-400 p-0.5 rounded transition">
+            <i class="fa-solid fa-xmark text-xs"></i>
+          </button>
+        `;
+        container.appendChild(chip);
+      });
+    }
+
+    function toggleTaskPanelVisibility() {
+      state.isTaskPanelCollapsed = !state.isTaskPanelCollapsed;
+      saveState();
+      applyPanelCollapseState();
+    }
+
+    function applyPanelCollapseState() {
+      const libraryZone = document.getElementById('task-library-zone');
+      const icon = document.getElementById('toggle-task-panel-icon');
+      const btn = document.getElementById('toggle-task-panel-btn');
+
+      if (!libraryZone || !icon || !btn) return;
+
+      if (state.isTaskPanelCollapsed) {
+        libraryZone.classList.add('hidden');
+        icon.className = "fa-solid fa-chevron-down";
+        btn.title = "展開任務資源庫";
+        btn.classList.add('bg-sky-900', 'text-sky-200');
+      } else {
+        libraryZone.classList.remove('hidden');
+        icon.className = "fa-solid fa-chevron-up";
+        btn.title = "收合任務資源庫";
+        btn.classList.remove('bg-sky-900', 'text-sky-200');
+      }
+    }
+
+    function toggleTaskPanelLock() {
+      state.isTaskPanelLocked = !state.isTaskPanelLocked;
+      updateTaskLockUI();
+      renderTodayTasks();
+      renderPresetLibrary();
+      
+      if (state.isTaskPanelLocked) {
+        showToast("🔒 已切換為「編輯鎖定」");
+      } else {
+        showToast("🔓 已切換為「開放編輯」");
+      }
+    }
+
+    function updateTaskLockUI() {
+      const lockBtn = document.getElementById('task-lock-btn');
+      const lockIcon = document.getElementById('task-lock-icon');
+      const lockText = document.getElementById('task-lock-text');
+      const customInput = document.getElementById('custom-task-input');
+      const addCustomBtn = document.getElementById('btn-add-custom');
+      const clearTodayBtn = document.getElementById('btn-clear-today');
+
+      if (!lockBtn) return;
+
+      if (state.isTaskPanelLocked) {
+        lockBtn.className = "px-2.5 py-1 text-xs font-black rounded-lg transition flex items-center gap-1.5 shrink-0 shadow bg-amber-950/80 text-amber-300 border border-amber-500/70 hover:bg-amber-900 touch-target";
+        if (lockIcon) lockIcon.className = "fa-solid fa-lock text-xs";
+        if (lockText) lockText.textContent = "編輯鎖定";
+
+        if (customInput) customInput.disabled = true;
+        if (addCustomBtn) addCustomBtn.disabled = true;
+        if (clearTodayBtn) clearTodayBtn.disabled = true;
+      } else {
+        lockBtn.className = "px-2.5 py-1 text-xs font-black rounded-lg transition flex items-center gap-1.5 shrink-0 shadow bg-emerald-600 text-slate-950 border border-emerald-300 hover:bg-emerald-500 touch-target";
+        if (lockIcon) lockIcon.className = "fa-solid fa-lock-open text-xs";
+        if (lockText) lockText.textContent = "開放編輯";
+
+        if (customInput) customInput.disabled = false;
+        if (addCustomBtn) addCustomBtn.disabled = false;
+        if (clearTodayBtn) clearTodayBtn.disabled = false;
+      }
+    }
+
+    function guardedAddTodayTask(taskName) {
+      if (state.isTaskPanelLocked) {
+        showToast("⚠️ 目前為「編輯鎖定」！請先點擊按鈕切換至「開放編輯」");
+        return;
+      }
+      addTodayTask(taskName);
+    }
+
+    function guardedAddCustomTask() {
+      if (state.isTaskPanelLocked) {
+        showToast("⚠️ 目前為「編輯鎖定」！請先點擊按鈕切換至「開放編輯」");
+        return;
+      }
+      addCustomTask();
+    }
+
+    function guardedClearTodayTasks() {
+      if (state.isTaskPanelLocked) {
+        showToast("⚠️️ 目前為「編輯鎖定」！請先點擊按鈕切換至「開放編輯」");
+        return;
+      }
+      clearTodayTasks();
+    }
+
+    function guardedSelectAllTasks() {
+      if (state.todayTasks.length === 0) {
+        showToast("請先將作業加入今日任務！");
+        return;
+      }
+      if (state.isTaskPanelLocked) {
+        showToast("⚠️ 目前為「編輯鎖定」！如需全班標記完成請先切換至「開放編輯」");
+        return;
+      }
+      selectAllTasks();
+    }
+
+    function guardedUnselectAllTasks() {
+      if (state.isTaskPanelLocked) {
+        showToast("⚠️ 目前為「編輯鎖定」！如需清除勾選請先切換至「開放編輯」");
+        return;
+      }
+      unselectAllTasks();
+    }
+
+    function toggleStudentTask(studentId, taskName) {
+      getAudioContext();
+      const student = state.students.find(s => s.id === studentId);
+      if (!student) return;
+
+      const idx = student.completedTasks.indexOf(taskName);
+      if (idx > -1) {
+        student.completedTasks.splice(idx, 1);
+      } else {
+        student.completedTasks.push(taskName);
+      }
+
+      saveState();
+      renderStudentGrid();
+      updateProgressMetrics();
+    }
+
+    function addTodayTask(taskName) {
+      if (!taskName) return;
+      if (state.todayTasks.includes(taskName)) {
+        showToast(`「${taskName}」已在全班任務中`);
+        return;
+      }
+      state.todayTasks.push(taskName);
+      state.hasPlayed100Celebration = false;
+      saveState();
+      renderAll();
+      showToast(`已新增全班任務「${taskName}」`);
+    }
+
+    function removeTodayTask(taskName) {
+      if (state.isTaskPanelLocked) {
+        showToast("⚠️ 目前為「編輯鎖定」！請先切換至「開放編輯」後再移除作業");
+        return;
+      }
+      state.todayTasks = state.todayTasks.filter(t => t !== taskName);
+      state.hasPlayed100Celebration = false;
+      saveState();
+      renderAll();
+      showToast(`已移除「${taskName}」`);
+    }
+
+    function addCustomTask() {
+      const input = document.getElementById('custom-task-input');
+      if (!input) return;
+      const value = input.value.trim();
+      if (!value) return;
+
+      if (!state.presetTasks.includes(value)) {
+        state.presetTasks.push(value);
+      }
+      addTodayTask(value);
+      input.value = '';
+    }
+
+    function selectAllTasks() {
+      state.students.forEach(s => {
+        const ind = Array.isArray(s.individualTasks) ? s.individualTasks : [];
+        s.completedTasks = [...new Set([...state.todayTasks, ...ind])];
+      });
+      saveState();
+      renderAll();
+      showToast("已將全班標記為完成！");
+    }
+
+    function unselectAllTasks() {
+      state.students.forEach(s => {
+        s.completedTasks = [];
+      });
+      state.hasPlayed100Celebration = false;
+      saveState();
+      renderAll();
+      showToast("已清空全班作業勾選！");
+    }
+
+    function clearTodayTasks() {
+      state.todayTasks = [];
+      state.hasPlayed100Celebration = false;
+      state.students.forEach(s => {
+        s.completedTasks = [];
+      });
+      saveState();
+      renderAll();
+      showToast("已清空全班任務清單");
+    }
+
+    function updateProgressMetrics() {
+      const totalStudents = state.students.length;
+      const rateCard = document.getElementById('class-rate-card');
+
+      if (totalStudents === 0) {
+        setRateDisplay(0);
+        if (rateCard) rateCard.classList.remove('glass-card-complete');
+        state.hasPlayed100Celebration = false;
+        return;
+      }
+
+      let totalAssignedPoints = 0;
+      let totalCompletedPoints = 0;
+
+      state.students.forEach(s => {
+        const indTasks = Array.isArray(s.individualTasks) ? s.individualTasks : [];
+        const studentTasks = [...new Set([...state.todayTasks, ...indTasks])];
+        totalAssignedPoints += studentTasks.length;
+
+        const doneCount = s.completedTasks.filter(t => studentTasks.includes(t)).length;
+        totalCompletedPoints += doneCount;
+      });
+
+      if (totalAssignedPoints === 0) {
+        setRateDisplay(0);
+        if (rateCard) rateCard.classList.remove('glass-card-complete');
+        state.hasPlayed100Celebration = false;
+        return;
+      }
+
+      const overallRate = Math.round((totalCompletedPoints / totalAssignedPoints) * 100);
+      setRateDisplay(overallRate);
+
+      if (overallRate === 100 && totalAssignedPoints > 0) {
+        if (rateCard) rateCard.classList.add('glass-card-complete');
+        if (!state.hasPlayed100Celebration) {
+          state.hasPlayed100Celebration = true;
+          triggerCelebrationEffects();
+        }
+      } else {
+        if (rateCard) rateCard.classList.remove('glass-card-complete');
+        state.hasPlayed100Celebration = false;
+      }
+    }
+
+    function setRateDisplay(rate) {
+      const el = document.getElementById('class-rate-text');
+      if (el) el.textContent = rate;
+    }
+
+    function toggleEditMode() {
+      state.isEditMode = !state.isEditMode;
+      const btn = document.getElementById('edit-mode-btn');
+      
+      if (state.isEditMode) {
+        if (btn) {
+          btn.classList.remove('bg-amber-950/80', 'text-amber-200');
+          btn.classList.add('bg-amber-500', 'text-slate-950', 'ring-2', 'ring-amber-300');
+          btn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i>`;
+        }
+        showToast("已開啟編修模式！點擊座號可直接修改");
+      } else {
+        if (document.activeElement && document.activeElement.blur) {
+          document.activeElement.blur();
+        }
+        if (btn) {
+          btn.classList.add('bg-amber-950/80', 'text-amber-200');
+          btn.classList.remove('bg-amber-500', 'text-slate-950', 'ring-2', 'ring-amber-300');
+          btn.innerHTML = `<i class="fa-solid fa-pen-to-square"></i>`;
+        }
+        saveState();
+        showToast("已儲存編修結果！");
+      }
+
+      renderAll();
+    }
+
+    function updateEditBanner() {
+      const banner = document.getElementById('edit-banner');
+      const countEl = document.getElementById('banner-student-count');
+      if (countEl) countEl.textContent = state.students.length;
+      if (!banner) return;
+      if (state.isEditMode) {
+        banner.classList.remove('hidden');
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+
+    function updateStudentText(event, index, field) {
+      if (!state.isEditMode) return;
+      let text = event.target.innerText.trim();
+      text = text.replace(/學生\s*/g, '');
+
+      if (state.students[index]) {
+        if (text === '') {
+          event.target.innerText = String(index + 1).padStart(2, '0');
+          state.students[index].number = event.target.innerText;
+        } else {
+          event.target.innerText = text;
+          state.students[index].number = text;
+        }
+        saveState();
+      }
+    }
+
+    function openStudentCountModal() {
+      const input = document.getElementById('student-count-input');
+      if (input) input.value = state.students.length;
+      highlightPresetCount(state.students.length);
+      document.getElementById('student-count-modal').classList.remove('hidden');
+      setTimeout(() => { if (input) input.focus(); }, 100);
+    }
+
+    function closeStudentCountModal() {
+      document.getElementById('student-count-modal').classList.add('hidden');
+    }
+
+    function highlightPresetCount(count) {
+      const buttons = document.querySelectorAll('#preset-count-buttons button');
+      buttons.forEach(btn => {
+        const val = parseInt(btn.getAttribute('data-count'), 10);
+        if (val === count) {
+          btn.className = "px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-black rounded-lg border-2 border-indigo-400 transition shadow touch-target";
+        } else {
+          btn.className = "px-3 py-1.5 bg-slate-800 hover:bg-indigo-600 text-slate-200 text-xs font-black rounded-lg border border-slate-700 transition touch-target";
+        }
+      });
+    }
+
+    function setQuickCount(val) {
+      const input = document.getElementById('student-count-input');
+      if (input) input.value = val;
+      highlightPresetCount(val);
+    }
+
+    function applyStudentCount() {
+      const input = document.getElementById('student-count-input');
+      const targetCount = parseInt(input.value, 10);
+
+      if (isNaN(targetCount) || targetCount < 1 || targetCount > 50) {
+        showToast("請輸入 1 至 50 之間的有效人數！");
+        return;
+      }
+
+      adjustStudentCount(targetCount);
+      closeStudentCountModal();
+    }
+
+    function adjustStudentCount(targetCount) {
+      const currentCount = state.students.length;
+
+      if (targetCount === currentCount) {
+        showToast(`班級人數已為 ${targetCount} 人`);
+        return;
+      }
+
+      if (targetCount > currentCount) {
+        for (let i = currentCount + 1; i <= targetCount; i++) {
+          state.students.push({
+            id: Date.now() + i,
+            number: String(i).padStart(2, '0'),
+            name: `${i}號`,
+            completedTasks: [],
+            individualTasks: []
+          });
+        }
+      } else {
+        state.students = state.students.slice(0, targetCount);
+      }
+
+      state.totalStudents = targetCount;
+      saveState();
+      renderAll();
+      showToast(`班級人數已調整為 ${targetCount} 人`);
+    }
+
+    function addStudent() {
+      const newId = state.students.length + 1;
+      if (newId > 50) {
+        showToast("已達人數上限 (50人)！");
+        return;
+      }
+      state.students.push({
+        id: Date.now(),
+        number: String(newId).padStart(2, '0'),
+        name: `${newId}號`,
+        completedTasks: [],
+        individualTasks: []
+      });
+      state.totalStudents = state.students.length;
+      saveState();
+      renderAll();
+      showToast(`已新增座號 ${newId}號`);
+    }
+
+    function removeLastStudent() {
+      if (state.students.length <= 1) {
+        showToast("至少需保留一個座號！");
+        return;
+      }
+      const removed = state.students.pop();
+      state.totalStudents = state.students.length;
+      saveState();
+      renderAll();
+      showToast(`已移除最後一位 (${removed.number}號)`);
+    }
+
+    function openResetModal() {
+      const desc = document.getElementById('reset-modal-desc');
+      if (desc) {
+        desc.textContent = `這將清空全班 ${state.students.length} 位座號現有所有作業勾選紀錄。建議在新的一天開始時使用。`;
+      }
+      document.getElementById('reset-modal').classList.remove('hidden');
+    }
+
+    function closeResetModal() {
+      document.getElementById('reset-modal').classList.add('hidden');
+    }
+
+    function confirmResetAll() {
+      state.todayTasks = [];
+      state.hasPlayed100Celebration = false;
+      state.students.forEach(s => {
+        s.completedTasks = [];
+        s.individualTasks = [];
+      });
+      saveState();
+      closeResetModal();
+      renderAll();
+      showToast("作業紀錄、個別任務與狀態已完全重設");
+    }
+
+    function handleBackdropClick(event, modalId) {
+      if (event.target.id === modalId) {
+        if (modalId === 'student-count-modal') closeStudentCountModal();
+        if (modalId === 'reset-modal') closeResetModal();
+        if (modalId === 'individual-task-modal') closeIndividualTaskModal();
+      }
+    }
+
+    function initGlobalShortcuts() {
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeStudentCountModal();
+          closeResetModal();
+          closeIndividualTaskModal();
+          const body = document.getElementById('app-body');
+          if (body && body.classList.contains('pseudo-fullscreen-mode')) {
+            toggleFullscreen();
+          }
+        }
+      });
+    }
+
+    function toggleFullscreen() {
+      const doc = document.documentElement;
+      const body = document.getElementById('app-body');
+      const icon = document.getElementById('fullscreen-icon');
+      const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+
+      if (!isFullscreen && !body.classList.contains('pseudo-fullscreen-mode')) {
+        const reqFs = doc.requestFullscreen || doc.webkitRequestFullscreen || doc.mozRequestFullScreen || doc.msRequestFullscreen;
+        if (reqFs) {
+          reqFs.call(doc).then(() => {
+            if (icon) icon.className = "fa-solid fa-compress";
+          }).catch(() => {
+            body.classList.add('pseudo-fullscreen-mode');
+            if (icon) icon.className = "fa-solid fa-compress";
+            showToast("已切換至滿版展示模式");
+          });
+        } else {
+          body.classList.add('pseudo-fullscreen-mode');
+          if (icon) icon.className = "fa-solid fa-compress";
+          showToast("已切換至滿版展示模式");
+        }
+      } else {
+        const exitFs = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+        if (isFullscreen && exitFs) {
+          exitFs.call(document).then(() => {
+            if (icon) icon.className = "fa-solid fa-expand";
+          }).catch(() => {});
+        }
+        body.classList.remove('pseudo-fullscreen-mode');
+        if (icon) icon.className = "fa-solid fa-expand";
+        showToast("已結束全螢幕模式");
+      }
+    }
+
+    ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(evt => {
+      document.addEventListener(evt, () => {
+        const icon = document.getElementById('fullscreen-icon');
+        const isFs = document.fullscreenElement || document.webkitFullscreenElement;
+        if (icon) {
+          icon.className = isFs ? "fa-solid fa-compress" : "fa-solid fa-expand";
+        }
+      });
+    });
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const toast = document.getElementById('toast-message');
+      const text = document.getElementById('toast-text');
+      if (!toast || !text) return;
+      text.textContent = msg;
+
+      toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      if (toastTimer) clearTimeout(toastTimer);
       toastTimer = setTimeout(() => {
-        toastMessage.classList.remove('show');
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
       }, 2400);
     }
-
-    // 跳脫字元防護
-    function escapeHTML(str) {
-      return str.replace(/[&<>'"]/g, 
-        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-      );
-    }
-
-    // 頁面初始化
-    window.addEventListener('DOMContentLoaded', () => {
-      renderSites();
-      activateSite(siteRegistry[0].id);
-    });
   </script>
 </body>
 </html>
